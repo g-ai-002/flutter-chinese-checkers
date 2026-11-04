@@ -184,6 +184,7 @@ class SettingsPage extends StatelessWidget {
 
   Future<void> _showLogs(BuildContext context) async {
     final logs = LogService.getRecentLogs(300);
+    final size = MediaQuery.sizeOf(context);
     final path = LogService.logFilePath.isNotEmpty
         ? LogService.logFilePath
         : await FileSystemService.instance.getLogRootPath();
@@ -195,8 +196,8 @@ class SettingsPage extends StatelessWidget {
         return AlertDialog(
           title: const Text('最近日志'),
           content: SizedBox(
-            width: 620,
-            height: 420,
+            width: size.width < 720 ? double.infinity : 620,
+            height: size.height < 640 ? size.height * 0.55 : 420,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

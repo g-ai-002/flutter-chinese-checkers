@@ -96,7 +96,6 @@ void main() {
       const GameSetup(
         mode: PlayMode.vsAi,
         playerCount: PlayerCount.two,
-        humanSeat: 0,
         difficulty: Difficulty.easy,
       ),
       size: const Size(400, 820),

@@ -136,7 +136,8 @@ class BoardComponent extends PositionComponent with TapCallbacks {
   /// 人机对战把自己的营地转到棋盘正下方，前进方向朝上更符合直觉。
   double _rotationForHome() {
     if (controller.setup.mode != PlayMode.vsAi) return 0;
-    final arm = controller.setup.seatArms[controller.setup.humanSeat];
+    final seat = controller.setup.humanSeat.clamp(0, controller.players - 1);
+    final arm = controller.setup.seatArms[seat];
     final tip = _geometry.holes[_geometry.tipHole(arm)];
     final base = math.atan2(tip.y, tip.x);
     return math.pi / 2 - base;
