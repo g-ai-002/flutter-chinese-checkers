@@ -90,6 +90,30 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
+  testWidgets('人机对战自动完成电脑回合并渲染旋转后的棋盘', (tester) async {
+    await pumpGame(
+      tester,
+      const GameSetup(
+        mode: PlayMode.vsAi,
+        playerCount: PlayerCount.two,
+        humanSeat: 0,
+        difficulty: Difficulty.easy,
+      ),
+      size: const Size(400, 820),
+    );
+
+    await tester.pump(const Duration(milliseconds: 800));
+    expect(tester.takeException(), isNull);
+    expect(find.text('轮到 你'), findsOneWidget);
+
+    await tester.tap(find.text('提示'));
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(tester.takeException(), isNull);
+    await tester.pump(const Duration(seconds: 7));
+
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
   testWidgets('对局页标题展示人数与模式', (tester) async {
     await pumpGame(
       tester,
