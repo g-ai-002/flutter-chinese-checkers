@@ -1,0 +1,51 @@
+import 'package:flame/game.dart';
+import 'package:flutter/material.dart';
+
+import '../game/checkers_controller.dart';
+import '../theme/app_theme.dart';
+import 'board_component.dart';
+
+/// Flame 游戏入口：棋盘组件 + 主题监听。
+class CheckersGame extends FlameGame {
+  CheckersGame({
+    required this.controller,
+    required BoardTheme theme,
+    this.showHints = true,
+  }) : _theme = ValueNotifier(theme);
+
+  final CheckersController controller;
+  final bool showHints;
+  final ValueNotifier<BoardTheme> _theme;
+  BoardComponent? _board;
+
+  BoardTheme get theme => _theme.value;
+  set theme(BoardTheme value) => _theme.value = value;
+
+  @override
+  Color backgroundColor() => Colors.transparent;
+
+  @override
+  Future<void> onLoad() async {
+    final board = BoardComponent(
+      controller: controller,
+      theme: _theme,
+      showHints: showHints,
+    );
+    _board = board;
+    await add(board);
+    _fit(board);
+  }
+
+  @override
+  void onGameResize(Vector2 size) {
+    super.onGameResize(size);
+    final board = _board;
+    if (board != null) _fit(board);
+  }
+
+  void _fit(BoardComponent board) {
+    board
+      ..size = size.clone()
+      ..position = Vector2.zero();
+  }
+}
