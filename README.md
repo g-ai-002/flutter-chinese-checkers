@@ -23,13 +23,13 @@
 
 ## 下载
 
-v0.1.0（首个版本）：[Gitea Release](http://192.168.31.120:3020/GTech/flutter-chinese-checkers/releases/tag/v0.1.0)
+v0.1.1（最新）：[Gitea Release](http://192.168.31.120:3020/GTech/flutter-chinese-checkers/releases/tag/v0.1.1)
 
 | 平台 | 产物 |
 | --- | --- |
-| Android (arm64) | `flutter-chinese-checkers-0.1.0-android-aarch64.apk` |
-| Windows (x64, Win10+) | `flutter-chinese-checkers-0.1.0-windows-x86_64.zip` |
-| Web | `flutter-chinese-checkers-0.1.0-web.zip`（解压后起静态服务器） |
+| Android (arm64) | `flutter-chinese-checkers-0.1.1-android-aarch64.apk` |
+| Windows (x64, Win10+) | `flutter-chinese-checkers-0.1.1-windows-x86_64.zip` |
+| Web | `flutter-chinese-checkers-0.1.1-web.zip`（解压后起静态服务器） |
 
 ## 规则
 
@@ -74,4 +74,5 @@ lib/
 
 | 版本 | 说明 |
 | --- | --- |
+| v0.1.1 | 修复窄屏日志弹窗溢出，收紧人机座位边界并补充对局页用例 |
 | v0.1.0 | 首个版本：121 孔六角星棋盘、2/3/4/6 人对局、三档电脑对手、提示与悔棋、三套棋盘配色与合成音效 |
