@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>__TITLE__ · 在线试玩</title>
+  <meta name="description" content="__TITLE__ 的在线试玩入口与历史版本列表，每个发布 tag 对应一个可独立试玩的 Web 版本。">
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 48px 20px 64px;
+      font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", system-ui, sans-serif;
+      color: #f7f1e4;
+      background: radial-gradient(circle at 50% -20%, #5a2418 0%, #2b1410 45%, #140b08 100%);
+    }
+    .wrap { max-width: 960px; margin: 0 auto; }
+    header { text-align: center; margin-bottom: 26px; }
+    h1 { margin: 0 0 10px; font-size: clamp(24px, 4vw, 34px); letter-spacing: 1px; }
+    header p { margin: 0; color: #d6b7a3; font-size: 14px; line-height: 1.7; }
+
+    /* 顶部最新正式版本入口 */
+    .hero {
+      display: block;
+      margin-bottom: 26px;
+      padding: 26px 24px 24px;
+      border-radius: 18px;
+      text-align: center;
+      text-decoration: none;
+      color: inherit;
+      background: linear-gradient(135deg, rgba(214, 152, 92, 0.28) 0%, rgba(166, 58, 43, 0.16) 100%);
+      border: 1px solid rgba(214, 152, 92, 0.55);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(214, 152, 92, 0.12);
+      transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+    }
+    .hero:hover {
+      transform: translateY(-2px);
+      border-color: #f0c48a;
+      background: linear-gradient(135deg, rgba(214, 152, 92, 0.42) 0%, rgba(166, 58, 43, 0.24) 100%);
+      box-shadow: 0 14px 36px rgba(0, 0, 0, 0.38), 0 0 0 1px rgba(214, 152, 92, 0.24);
+    }
+    .hero-label { display: block; font-size: 13px; font-weight: 600; letter-spacing: 3px; color: #ecd0a8; }
+    .hero-ver { display: block; margin: 8px 0 14px; font-size: clamp(28px, 6vw, 42px); font-weight: 700; letter-spacing: 2px; }
+    .hero-go {
+      display: inline-block;
+      padding: 9px 26px;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #2a1206;
+      background: #d9985c;
+    }
+
+    /* 正式版本 / 调试版本两列 */
+    .columns {
+      display: grid;
+      gap: 20px;
+      grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+      align-items: start;
+    }
+    .panel {
+      padding: 18px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.035);
+      border: 1px solid rgba(214, 152, 92, 0.14);
+    }
+    .panel h2 {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin: 0 0 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(214, 152, 92, 0.16);
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      color: #f0e0cc;
+    }
+    .panel h2::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #d9985c;
+      box-shadow: 0 0 8px #d9985c;
+    }
+    .panel-debug h2::before { background: #f0a24b; box-shadow: 0 0 8px #f0a24b; }
+
+    .list { display: grid; gap: 10px; }
+    .card {
+      display: block;
+      padding: 14px 18px;
+      border-radius: 12px;
+      text-decoration: none;
+      color: inherit;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(214, 152, 92, 0.22);
+      transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+    }
+    .card:hover {
+      transform: translateY(-2px);
+      border-color: #d9985c;
+      background: rgba(214, 152, 92, 0.14);
+    }
+    .ver { display: block; font-size: 18px; font-weight: 600; letter-spacing: 0.5px; }
+    .badge {
+      display: inline-block;
+      margin-left: 8px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #2a1206;
+      background: #d9985c;
+      vertical-align: 2px;
+    }
+    .badge-debug { background: #f0a24b; color: #2a1602; }
+    .go { display: block; margin-top: 4px; font-size: 12px; color: #d6b7a3; }
+    .empty {
+      margin: 0;
+      padding: 14px 16px;
+      border-radius: 12px;
+      border: 1px dashed rgba(240, 162, 75, 0.35);
+      color: #b18a5d;
+      font-size: 13px;
+    }
+    footer { margin-top: 36px; text-align: center; font-size: 12px; line-height: 1.8; color: #b09a86; }
+    footer a { color: #d9985c; text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    @media (max-width: 680px) {
+      .columns { grid-template-columns: minmax(0, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>__TITLE__</h1>
+      <p>点击即可直接开玩，下方只保留最近 3 个 MINOR 版本（每个 MINOR 取最新一次发布）。<br>点击棋子选中，再点落点走子；桌面端与移动端均为点选操作。</p>
+    </header>
+__LATEST__
+    <div class="columns">
+      <section class="panel">
+        <h2>正式版本</h2>
+        <div class="list">
+__RELEASES__
+        </div>
+      </section>
+      <section class="panel panel-debug">
+        <h2>调试版本</h2>
+        <div class="list">
+__DEBUG__
+        </div>
+      </section>
+    </div>
+    <footer>
+      <p>仓库：__REPO__ · 更新于 __UPDATED__</p>
+      <p>Android APK 与 Windows ZIP 请到该仓库的 Releases 页面下载。</p>
+    </footer>
+  </div>
+</body>
+</html>

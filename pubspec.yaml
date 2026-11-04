@@ -1,0 +1,44 @@
+name: chinese_checkers
+description: 中国跳棋 - 支持 2/3/4/6 人对局与人机对战，覆盖 Android、Windows 与 Web
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: '>=3.13.7 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  flame: 1.38.2
+  provider: 6.1.5+1
+  shared_preferences: 2.5.6
+  path_provider: 2.1.6
+  path: 1.9.1
+  window_manager: 0.5.2
+  flutter_soloud: 5.2.2
+  soup_fonts: 0.0.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: 6.0.0
+
+flutter:
+  uses-material-design: true
+
+  # Web 端中文字体来自 soup_fonts，仓库不存放字体文件。
+  fonts:
+    - family: SourceHanSansCN
+      fonts:
+        - asset: packages/soup_fonts/fonts/SourceHanSansCN-Regular.otf
+        - asset: packages/soup_fonts/fonts/SourceHanSansCN-Bold.otf
+          weight: 700
+
+# 音效全部是运行时合成的 WAV，用不到 Ogg/Opus/Vorbis/FLAC。
+# 关掉 Xiph 后构建钩子不再从 GitHub Releases 下载预编译库（曾因 502 让 CI 构建失败）。
+hooks:
+  user_defines:
+    flutter_soloud:
+      no_xiph_libs: true

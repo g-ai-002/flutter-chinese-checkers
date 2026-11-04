@@ -1,0 +1,21 @@
+analyzer:
+  exclude:
+    - build/**
+    - android/**
+include: package:flutter_lints/flutter.yaml
+
+linter:
+  rules:
+    prefer_const_constructors: true
+    prefer_const_declarations: true
+    avoid_print: false
+    require_trailing_commas: true
+    use_key_in_widget_constructors: true
+    avoid_unnecessary_containers: true
+    prefer_single_quotes: true
+    unnecessary_library_name: true
+    sort_child_properties_last: true
+    prefer_const_literals_to_create_immutables: true
+    avoid_redundant_argument_values: true
+    prefer_final_locals: true
+    prefer_const_constructors_in_immutables: true
