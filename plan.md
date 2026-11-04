@@ -58,4 +58,4 @@
   - [x] 日志按天写入用户目录，设置页查看最近日志、打开日志目录、复制日志
   - [x] 版本号 0.1.0，Android minSdk 35 / targetSdk 37 / compileSdk 37，长期签名密钥随仓库提供
   - [x] Gitea / GitHub 双构建流水线：测试、Android APK、Windows ZIP、Web 站点与 Release
-  - [x] 61 个测试用例覆盖棋盘几何、规则、AI、控制器、存储、音效、页面与响应式布局
+  - [x] 62 个测试用例覆盖棋盘几何、规则、AI、控制器、存储、音效、页面与响应式布局
