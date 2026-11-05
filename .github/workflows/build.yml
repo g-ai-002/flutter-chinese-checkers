@@ -11,7 +11,7 @@ concurrency:
 
 env:
   JAVA_VERSION: '21'
-  FLUTTER_VERSION: '3.47.8'
+  FLUTTER_VERSION: '3.47.9'
   APP_NAME: ${{ github.event.repository.name }}
 
 jobs:
