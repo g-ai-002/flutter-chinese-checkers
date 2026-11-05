@@ -1,23 +1,21 @@
 import 'package:flutter/material.dart';
 
-import '../../models/game_models.dart';
+import '../../models/match_record.dart';
 import '../../theme/player_palette.dart';
 import '../../utils/formatters.dart';
 
-/// 终局弹窗：显示胜者、步数与用时。
+/// 终局弹窗：显示胜者、步数、用时与本局亮点。
 Future<void> showGameResultDialog(
   BuildContext context, {
-  required GameResult result,
-  required String winnerLabel,
+  required MatchRecord record,
   required VoidCallback onReplay,
   required VoidCallback onRestart,
   required VoidCallback onHome,
 }) {
-  final winner = result.winner;
-  final isDraw = winner == null;
+  final winner = record.winner;
+  final isDraw = record.isDraw;
   final style = playerStyleOf(winner ?? 0);
-  final minutes = result.duration.inMinutes;
-  final seconds = result.duration.inSeconds % 60;
+  final efficiency = record.entryEfficiency;
   return showDialog<void>(
     context: context,
     barrierDismissible: false,
@@ -31,7 +29,11 @@ Future<void> showGameResultDialog(
                 : style.main,
           ),
           const SizedBox(width: 10),
-          Expanded(child: Text(isDraw ? '本局僵局' : '$winnerLabel获胜')),
+          Expanded(
+            child: Text(
+              winner == null ? '本局僵局' : '${record.setup.seatLabel(winner)}获胜',
+            ),
+          ),
         ],
       ),
       content: Column(
@@ -39,13 +41,33 @@ Future<void> showGameResultDialog(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            isDraw ? '所有玩家都没有可走的棋，本局就此结束。' : '十枚棋子全部进入对面营地。',
+            isDraw ? '局面陷入停滞，本局就此结束。' : '十枚棋子全部进入对面营地。',
             style: Theme.of(dialogContext).textTheme.bodyMedium,
           ),
           const SizedBox(height: 16),
-          _StatRow(label: '总步数', value: '${result.moves} 步'),
+          _StatRow(label: '总步数', value: '${record.moves} 步'),
           const SizedBox(height: 8),
-          _StatRow(label: '用时', value: '${pad2(minutes)}:${pad2(seconds)}'),
+          _StatRow(label: '用时', value: formatDuration(record.duration)),
+          if (record.longestJump > 0) ...[
+            const SizedBox(height: 8),
+            _StatRow(label: '最长连跳', value: '×${record.longestJump}'),
+          ],
+          if (efficiency != null) ...[
+            const SizedBox(height: 8),
+            _StatRow(
+              label: '入营效率',
+              value: '${efficiency.toStringAsFixed(1)} 步/子',
+            ),
+          ],
+          if (record.moves > 0) ...[
+            const SizedBox(height: 14),
+            Text(
+              '本局最佳着法可在复盘棋谱中查看。',
+              style: Theme.of(dialogContext).textTheme.bodySmall?.copyWith(
+                color: Theme.of(dialogContext).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
         ],
       ),
       actions: [

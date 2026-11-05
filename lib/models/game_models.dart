@@ -85,18 +85,3 @@ class GameSetup {
     return suffix;
   }
 }
-
-/// 对局结果：平局（僵局）时 [winner] 为 null。
-class GameResult {
-  const GameResult({
-    required this.winner,
-    required this.moves,
-    required this.duration,
-  });
-
-  final int? winner;
-  final int moves;
-  final Duration duration;
-
-  bool get isDraw => winner == null;
-}

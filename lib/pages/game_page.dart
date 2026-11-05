@@ -1,10 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../flame/checkers_game.dart';
 import '../game/checkers_controller.dart';
 import '../models/game_models.dart';
+import '../models/match_record.dart';
 import '../providers/settings_provider.dart';
+import '../services/log_service.dart';
 import '../services/sound_service.dart';
 import '../utils/constants.dart';
 import 'replay_page.dart';
@@ -91,16 +95,20 @@ class _GamePageState extends State<GamePage> {
   }
 
   void _showResult() {
-    final winner = _controller.winner;
-    final result = GameResult(
-      winner: winner,
-      moves: _controller.history.length,
+    final record = MatchRecord.fromGame(
+      setup: widget.setup,
+      records: _controller.records,
+      winner: _controller.winner,
       duration: _controller.duration,
+    );
+    unawaited(context.read<SettingsProvider>().recordMatch(record));
+    LogService.info(
+      '记录对局: ${record.outcomeLabel}, ${record.moves} 步, '
+      '最长连跳 ${record.longestJump}, 用时 ${record.duration.inSeconds}s',
     );
     showGameResultDialog(
       context,
-      result: result,
-      winnerLabel: winner == null ? '' : widget.setup.seatLabel(winner),
+      record: record,
       onReplay: () {
         Navigator.of(context).pop();
         _openReplay();
