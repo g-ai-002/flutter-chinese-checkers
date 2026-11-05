@@ -96,6 +96,78 @@ void main() {
     replay.dispose();
   });
 
+  test('前后反复跳转后局面与从头重放一致', () {
+    final records = sampleRecords(8);
+    final replay = ReplayController(setup: setup, records: records);
+    final geometry = replay.geometry;
+
+    List<int> expectedAt(int count) {
+      final board = CheckersBoard.initial(geometry, setup.seatArms);
+      for (var i = 0; i < count; i++) {
+        board.move(records[i].move.from, records[i].move.to);
+      }
+      return board.cells;
+    }
+
+    replay.seekTo(6);
+    expect(replay.board.cells, expectedAt(6));
+    expect(replay.history, hasLength(6));
+
+    replay.seekTo(2);
+    expect(replay.board.cells, expectedAt(2));
+    expect(replay.history, hasLength(2));
+
+    replay.next();
+    expect(replay.board.cells, expectedAt(3));
+
+    replay.toEnd();
+    expect(replay.board.cells, expectedAt(8));
+
+    replay.toStart();
+    expect(replay.board.cells, expectedAt(0));
+    replay.dispose();
+  });
+
+  test('手动跳转暂停播放并只通知一次', () {
+    final replay = ReplayController(
+      setup: setup,
+      records: sampleRecords(4),
+      playInterval: const Duration(milliseconds: 200),
+    );
+    replay.toEnd();
+    replay.play();
+    expect(replay.isPlaying, isTrue);
+
+    var notifications = 0;
+    replay.addListener(() => notifications++);
+    replay.seekTo(2);
+
+    expect(notifications, 1);
+    expect(replay.isPlaying, isFalse);
+    expect(replay.index, 2);
+    replay.dispose();
+  });
+
+  test('空棋谱保持开局且无法播放', () {
+    final replay = ReplayController(setup: setup, records: const []);
+    var notifications = 0;
+    replay.addListener(() => notifications++);
+
+    replay.play();
+    replay.next();
+    replay.previous();
+    replay.toEnd();
+
+    expect(replay.index, 0);
+    expect(replay.total, 0);
+    expect(replay.atStart, isTrue);
+    expect(replay.atEnd, isTrue);
+    expect(replay.currentStep, isNull);
+    expect(replay.isPlaying, isFalse);
+    expect(notifications, 0);
+    replay.dispose();
+  });
+
   test('自动播放逐手推进，到终点自动停止', () async {
     final replay = ReplayController(
       setup: setup,

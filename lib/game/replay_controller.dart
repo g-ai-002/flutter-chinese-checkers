@@ -119,8 +119,10 @@ class ReplayController extends ChangeNotifier implements BoardSource {
 
   /// 跳到第 [target] 手之后（0 表示开局）。手动跳转会暂停自动播放。
   void seekTo(int target) {
-    if (_playing) pause();
-    _seek(target.clamp(0, total));
+    final wasPlaying = _playing;
+    _stopPlayback();
+    final moved = _seek(target.clamp(0, total));
+    if (moved || wasPlaying) notifyListeners();
   }
 
   void next() => seekTo(_index + 1);
@@ -142,8 +144,7 @@ class ReplayController extends ChangeNotifier implements BoardSource {
 
   void pause() {
     if (!_playing) return;
-    _playing = false;
-    _epoch++;
+    _stopPlayback();
     notifyListeners();
   }
 
@@ -159,23 +160,42 @@ class ReplayController extends ChangeNotifier implements BoardSource {
         return;
       }
       _seek(_index + 1);
+      notifyListeners();
       _scheduleTick();
     });
   }
 
-  void _seek(int target) {
-    if (_disposed || target == _index) return;
-    final rebuilt = CheckersBoard.initial(geometry, setup.seatArms);
-    for (var i = 0; i < target; i++) {
-      final move = _records[i].move;
-      rebuilt.move(move.from, move.to);
+  void _stopPlayback() {
+    if (!_playing) return;
+    _playing = false;
+    _epoch++;
+  }
+
+  /// 重建到第 [target] 手。向前只补走增量，向后才从开局重放。
+  ///
+  /// 自动播放逐手前进时因此是 O(1)，拖动进度条回退时才整局重放。
+  bool _seek(int target) {
+    if (_disposed) return false;
+    if (target == _index) return false;
+
+    if (target > _index) {
+      for (var i = _index; i < target; i++) {
+        final move = _records[i].move;
+        board.move(move.from, move.to);
+      }
+    } else {
+      board = CheckersBoard.initial(geometry, setup.seatArms);
+      for (var i = 0; i < target; i++) {
+        final move = _records[i].move;
+        board.move(move.from, move.to);
+      }
     }
-    board = rebuilt;
+
     _index = target;
     _visible
       ..clear()
       ..addAll(_records.take(target));
-    notifyListeners();
+    return true;
   }
 
   @override

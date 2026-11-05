@@ -110,4 +110,20 @@ void main() {
 
     await tester.pumpWidget(const SizedBox.shrink());
   });
+
+  testWidgets('窄屏棋谱浮层可直接跳转到某一手', (tester) async {
+    await pumpReplay(tester, size: const Size(400, 820));
+
+    await tester.tap(find.byTooltip('棋谱'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    await tester.tap(find.text('2'));
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.text('第 2 / 6 手'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
 }
