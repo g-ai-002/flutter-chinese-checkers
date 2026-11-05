@@ -7,8 +7,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../game/board_geometry.dart';
+import '../game/board_source.dart';
 import '../game/checkers_board.dart';
-import '../game/checkers_controller.dart';
 import '../models/game_models.dart';
 import '../services/sound_service.dart';
 import '../theme/app_theme.dart';
@@ -24,12 +24,12 @@ const double _holeRadius = 0.44;
 /// Flame 棋盘组件：绘制六角星棋盘、棋子、可走提示与走子动画，并处理点击。
 class BoardComponent extends PositionComponent with TapCallbacks {
   BoardComponent({
-    required this.controller,
+    required this.source,
     required this.theme,
     required this.showHints,
   });
 
-  final CheckersController controller;
+  final BoardSource source;
   final ValueListenable<BoardTheme> theme;
   final bool showHints;
 
@@ -47,12 +47,12 @@ class BoardComponent extends PositionComponent with TapCallbacks {
   final Map<int, ui.Picture> _sprites = {};
   double _spriteScale = 0;
 
-  BoardGeometry get _geometry => controller.geometry;
+  BoardGeometry get _geometry => source.geometry;
 
   @override
   Future<void> onLoad() async {
-    _mirror = controller.board.copy();
-    _seenHistory = controller.history.length;
+    _mirror = source.board.copy();
+    _seenHistory = source.history.length;
     theme.addListener(_invalidate);
   }
 
@@ -87,12 +87,21 @@ class BoardComponent extends PositionComponent with TapCallbacks {
     _animator.advance(dt);
   }
 
-  /// 把控制器新增的着法逐手补进动画队列，每手保存走完后的局面快照。
+  /// 把棋盘源新增的着法逐手补进动画队列，每手保存走完后的局面快照。
+  ///
+  /// 复盘直接切换局面，不做补播，避免拖动进度条时累积一长串动画。
   void _syncHistory() {
-    final records = controller.history;
+    final records = source.history;
+    if (!source.supportsMoveAnimation) {
+      if (records.length == _seenHistory) return;
+      _seenHistory = records.length;
+      _mirror = source.board.copy();
+      _animator.clear();
+      return;
+    }
     if (records.length < _seenHistory) {
       _seenHistory = records.length;
-      _mirror = controller.board.copy();
+      _mirror = source.board.copy();
       _animator.clear();
       return;
     }
@@ -126,7 +135,7 @@ class BoardComponent extends PositionComponent with TapCallbacks {
     _ensureLayers(scale);
 
     final anim = _animator.current;
-    final cells = anim?.cells ?? controller.board.cells;
+    final cells = anim?.cells ?? source.board.cells;
     canvas.save();
     canvas.translate(_origin.dx, _origin.dy);
     canvas.rotate(_rotation);
@@ -143,9 +152,9 @@ class BoardComponent extends PositionComponent with TapCallbacks {
 
   /// 人机对战把自己的营地转到棋盘正下方，前进方向朝上更符合直觉。
   double _rotationForHome() {
-    if (controller.setup.mode != PlayMode.vsAi) return 0;
-    final seat = controller.setup.humanSeat.clamp(0, controller.players - 1);
-    final arm = controller.setup.seatArms[seat];
+    if (source.setup.mode != PlayMode.vsAi) return 0;
+    final seat = source.setup.humanSeat.clamp(0, source.players - 1);
+    final arm = source.setup.seatArms[seat];
     final tip = _geometry.holes[_geometry.tipHole(arm)];
     final base = math.atan2(tip.y, tip.x);
     return math.pi / 2 - base;
@@ -158,7 +167,7 @@ class BoardComponent extends PositionComponent with TapCallbacks {
 
   /// 底板、营地底色与孔位不随对局变化，随尺寸缓存为一张图片。
   void _ensureLayers(double scale) {
-    final key = '${theme.value.id}-${controller.setup.seatArms.join(',')}';
+    final key = '${theme.value.id}-${source.setup.seatArms.join(',')}';
     if (_boardLayer != null &&
         (_cacheScale - scale).abs() < 0.01 &&
         _cacheKey == key) {
@@ -229,9 +238,9 @@ class BoardComponent extends PositionComponent with TapCallbacks {
   }
 
   void _paintCamps(Canvas canvas, double scale) {
-    for (var seat = 0; seat < controller.players; seat++) {
+    for (var seat = 0; seat < source.players; seat++) {
       final color = playerStyleOf(seat).main;
-      final arm = controller.setup.seatArms[seat];
+      final arm = source.setup.seatArms[seat];
       for (final hole in _geometry.armHoles[arm]) {
         canvas.drawCircle(
           _point(hole),
@@ -240,7 +249,7 @@ class BoardComponent extends PositionComponent with TapCallbacks {
         );
       }
       // 对面营地用空心圆标注目标，与自家营地实心色块区分。
-      final goal = controller.setup.targetArmOf(seat);
+      final goal = source.setup.targetArmOf(seat);
       final tip = _geometry.tipHole(goal);
       canvas.drawCircle(
         _point(tip),
@@ -285,7 +294,7 @@ class BoardComponent extends PositionComponent with TapCallbacks {
   }
 
   void _drawSelection(Canvas canvas, List<int> cells) {
-    final hole = controller.selectedHole;
+    final hole = source.selectedHole;
     if (hole == null || cells[hole] < 0) return;
     final center = _point(hole);
     final style = playerStyleOf(cells[hole]);
@@ -316,8 +325,8 @@ class BoardComponent extends PositionComponent with TapCallbacks {
 
   /// 可落点：单步画小圆点，连跳落点画双环，方便区分。
   void _drawTargets(Canvas canvas) {
-    if (!showHints || controller.targetHoles.isEmpty) return;
-    for (final entry in controller.targets.entries) {
+    if (!showHints || source.targets.isEmpty) return;
+    for (final entry in source.targets.entries) {
       final center = _point(entry.key);
       final jump = entry.value.jumpCount > 0;
       if (jump) {
@@ -346,7 +355,7 @@ class BoardComponent extends PositionComponent with TapCallbacks {
 
   /// 提示着法：金色折线沿连跳路径指向落点。
   void _drawHint(Canvas canvas) {
-    final hint = controller.hintMove;
+    final hint = source.hintMove;
     if (hint == null) return;
     const color = Color(0xFFE9C46A);
     final paint = Paint()
@@ -528,12 +537,12 @@ class BoardComponent extends PositionComponent with TapCallbacks {
       }
     }
     if (best < 0 || bestDistance > _scale * 0.62) return;
-    final before = controller.history.length;
-    final selectedBefore = controller.selectedHole;
-    controller.tapHole(best);
-    if (controller.history.length == before &&
-        controller.selectedHole != selectedBefore &&
-        controller.selectedHole != null) {
+    final before = source.history.length;
+    final selectedBefore = source.selectedHole;
+    source.tapHole(best);
+    if (source.history.length == before &&
+        source.selectedHole != selectedBefore &&
+        source.selectedHole != null) {
       SoundService.play(GameSound.select);
     }
   }

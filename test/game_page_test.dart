@@ -121,4 +121,19 @@ void main() {
     expect(find.text('6 人 · 同屏对战'), findsOneWidget);
     await tester.pumpWidget(const SizedBox.shrink());
   });
+
+  testWidgets('对局未结束时复盘入口不可用', (tester) async {
+    await pumpGame(
+      tester,
+      const GameSetup(mode: PlayMode.local, playerCount: PlayerCount.two),
+    );
+
+    final button = tester.widget<IconButton>(
+      find.widgetWithIcon(IconButton, Icons.history),
+    );
+    expect(button.onPressed, isNull);
+    expect(find.byTooltip('复盘（终局后可查看）'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
 }

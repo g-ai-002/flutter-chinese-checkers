@@ -7,6 +7,7 @@ import '../models/game_models.dart';
 import '../providers/settings_provider.dart';
 import '../services/sound_service.dart';
 import '../utils/constants.dart';
+import 'replay_page.dart';
 import 'widgets/board_stage.dart';
 import 'widgets/game_dialogs.dart';
 import 'widgets/players_panel.dart';
@@ -32,7 +33,7 @@ class _GamePageState extends State<GamePage> {
     final settings = context.read<SettingsProvider>();
     _controller = CheckersController(setup: widget.setup);
     _game = CheckersGame(
-      controller: _controller,
+      source: _controller,
       theme: settings.boardTheme,
       showHints: settings.showHints,
     );
@@ -57,6 +58,7 @@ class _GamePageState extends State<GamePage> {
 
   void _onControllerChanged() {
     if (!mounted) return;
+    setState(() {});
     final count = _controller.history.length;
     if (count > _seenMoves) {
       final move = _controller.lastMove;
@@ -78,6 +80,16 @@ class _GamePageState extends State<GamePage> {
     }
   }
 
+  void _openReplay() {
+    final records = _controller.records;
+    if (records.isEmpty) return;
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => ReplayPage(setup: widget.setup, records: records),
+      ),
+    );
+  }
+
   void _showResult() {
     final winner = _controller.winner;
     final result = GameResult(
@@ -89,6 +101,10 @@ class _GamePageState extends State<GamePage> {
       context,
       result: result,
       winnerLabel: winner == null ? '' : widget.setup.seatLabel(winner),
+      onReplay: () {
+        Navigator.of(context).pop();
+        _openReplay();
+      },
       onRestart: () {
         Navigator.of(context).pop();
         _controller.restart();
@@ -160,6 +176,11 @@ class _GamePageState extends State<GamePage> {
             '${widget.setup.playerCount.label} · ${widget.setup.mode.label}',
           ),
           actions: [
+            IconButton(
+              tooltip: _controller.isFinished ? '复盘' : '复盘（终局后可查看）',
+              onPressed: _controller.isFinished ? _openReplay : null,
+              icon: const Icon(Icons.history, size: 21),
+            ),
             IconButton(
               tooltip: '玩法说明',
               onPressed: () => showRulesDialog(context),

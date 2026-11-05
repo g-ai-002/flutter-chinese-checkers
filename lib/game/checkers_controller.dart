@@ -6,23 +6,19 @@ import 'package:flutter/foundation.dart';
 import '../models/game_models.dart';
 import '../services/log_service.dart';
 import 'board_geometry.dart';
+import 'board_source.dart';
 import 'checkers_ai.dart';
 import 'checkers_board.dart';
 import 'checkers_rules.dart';
+import 'move_record.dart';
 
-/// 一条已完成的着法记录。
-class MoveRecord {
-  const MoveRecord({required this.seat, required this.move});
-
-  final int seat;
-  final CheckersMove move;
-}
+export 'move_record.dart';
 
 /// 对局控制器：维护局面、轮次、选子与悔棋，并在电脑回合自动走子。
 ///
 /// 所有状态变化都通过 [notifyListeners] 通知界面；电脑走子使用延时任务，
 /// 用 [_epoch] 令牌保证悔棋、重开后旧任务不会落子。
-class CheckersController extends ChangeNotifier {
+class CheckersController extends ChangeNotifier implements BoardSource {
   CheckersController({
     required this.setup,
     BoardGeometry? geometry,
@@ -50,7 +46,9 @@ class CheckersController extends ChangeNotifier {
   /// 连续这么多步没有新棋子进营即判和。
   static const int maxQuietPlies = 120;
 
+  @override
   final GameSetup setup;
+  @override
   final BoardGeometry geometry;
   final Duration aiDelay;
   final Random _random;
@@ -59,14 +57,18 @@ class CheckersController extends ChangeNotifier {
   late final CheckersAi _ai;
   late final CheckersAi _hintAi;
 
+  @override
   late CheckersBoard board;
   int currentSeat = 0;
   int? winner;
   bool isDraw = false;
   bool isAiThinking = false;
+  @override
   CheckersMove? hintMove;
+  @override
   int? selectedHole;
   final Map<int, CheckersMove> _targets = {};
+  @override
   final List<MoveRecord> history = [];
   final List<_Snapshot> _undoStack = [];
   DateTime? _startedAt;
@@ -78,7 +80,11 @@ class CheckersController extends ChangeNotifier {
 
   List<MoveRecord> get records => List.unmodifiable(history);
 
+  @override
   int get players => setup.players;
+
+  @override
+  bool get supportsMoveAnimation => true;
 
   bool get isFinished => winner != null || isDraw;
 
@@ -108,6 +114,7 @@ class CheckersController extends ChangeNotifier {
       rules.progress(board, seat, setup.targetArmOf(seat));
 
   /// 选中棋子后可以直接落子的孔位。
+  @override
   Map<int, CheckersMove> get targets => Map.unmodifiable(_targets);
 
   void start() {
@@ -121,6 +128,7 @@ class CheckersController extends ChangeNotifier {
   }
 
   /// 点击孔位：先尝试落子，再尝试选子，否则取消选择。
+  @override
   void tapHole(int hole) {
     if (_disposed || isFinished || isAiThinking) return;
     if (!isHumanTurn) return;

@@ -9,6 +9,7 @@ Future<void> showGameResultDialog(
   BuildContext context, {
   required GameResult result,
   required String winnerLabel,
+  required VoidCallback onReplay,
   required VoidCallback onRestart,
   required VoidCallback onHome,
 }) {
@@ -49,6 +50,11 @@ Future<void> showGameResultDialog(
       ),
       actions: [
         TextButton(onPressed: onHome, child: const Text('返回首页')),
+        TextButton.icon(
+          onPressed: onReplay,
+          icon: const Icon(Icons.history, size: 18),
+          label: const Text('复盘本局'),
+        ),
         FilledButton(onPressed: onRestart, child: const Text('再来一局')),
       ],
     ),
