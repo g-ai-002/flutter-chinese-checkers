@@ -361,7 +361,8 @@ class _MoveTile extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (position == controller.bestMoveNumber)
+                if (controller.hasBestMove &&
+                    position == controller.bestMoveNumber)
                   Padding(
                     padding: const EdgeInsets.only(right: 4),
                     child: Icon(

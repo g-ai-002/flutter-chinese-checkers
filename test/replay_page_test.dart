@@ -58,6 +58,24 @@ void main() {
     fail('前 $limit 手内没有出现跳跃');
   }
 
+  /// 只走单步，用于验证没有亮点时不显示星标。
+  List<MoveRecord> stepRecords(int count) {
+    final geometry = BoardGeometry.star();
+    final board = CheckersBoard.initial(geometry, setup.seatArms);
+    final rules = CheckersRules(geometry);
+    final records = <MoveRecord>[];
+    var seat = 0;
+    for (var i = 0; i < count; i++) {
+      final move = rules
+          .legalMoves(board, seat)
+          .firstWhere((candidate) => !candidate.jump);
+      board.move(move.from, move.to);
+      records.add(MoveRecord(seat: seat, move: move));
+      seat = (seat + 1) % setup.players;
+    }
+    return records;
+  }
+
   Future<void> pumpReplay(
     WidgetTester tester, {
     int moves = 6,
@@ -191,6 +209,15 @@ void main() {
 
     expect(find.textContaining('最佳着法 第'), findsOneWidget);
     expect(tester.takeException(), isNull);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('纯单步复盘不显示最佳着法与星标', (tester) async {
+    await pumpReplay(tester, records: stepRecords(2));
+
+    expect(find.textContaining('最佳着法'), findsNothing);
+    expect(find.byIcon(Icons.auto_awesome), findsNothing);
 
     await tester.pumpWidget(const SizedBox.shrink());
   });

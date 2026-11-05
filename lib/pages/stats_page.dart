@@ -15,7 +15,7 @@ class StatsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsProvider>();
     final matches = settings.matches;
-    final summary = settings.matchSummary;
+    final summary = MatchSummary.fromRecords(matches);
     return Scaffold(
       appBar: AppBar(
         title: const Text('对局统计'),
@@ -473,7 +473,7 @@ class _RecentMatches extends StatelessWidget {
     return _Panel(
       title: '最近对局',
       trailing: Text(
-        '共 ${records.length} 场',
+        '最近 ${records.length} 场',
         style: theme.textTheme.bodySmall?.copyWith(
           color: theme.colorScheme.onSurfaceVariant,
         ),

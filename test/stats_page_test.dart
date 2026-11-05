@@ -124,7 +124,7 @@ void main() {
     expect(find.text('3.3 步/子'), findsOneWidget);
 
     expect(find.text('最近对局'), findsOneWidget);
-    expect(find.text('共 3 场'), findsOneWidget);
+    expect(find.text('最近 3 场'), findsOneWidget);
     expect(find.textContaining('11-05 10:04'), findsOneWidget);
     expect(find.text('胜'), findsOneWidget);
     expect(find.text('平局'), findsOneWidget);
@@ -138,6 +138,26 @@ void main() {
 
     expect(find.text('总对局'), findsOneWidget);
     expect(tester.takeException(), isNull);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('超过八局时最近对局只展示八场并如实标注', (tester) async {
+    final lines = [
+      for (var i = 0; i < 10; i++)
+        jsonEncode(
+          record(
+            minute: i,
+            winner: i.isEven ? 0 : 1,
+            moves: 40 + i,
+            duration: const Duration(minutes: 3),
+          ).toJson(),
+        ),
+    ];
+    await pumpStats(tester, lines: lines);
+
+    expect(find.text('人机 10 · 同屏 0'), findsOneWidget);
+    expect(find.text('最近 8 场'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
   });
