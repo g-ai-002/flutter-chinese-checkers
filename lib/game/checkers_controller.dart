@@ -88,11 +88,15 @@ class CheckersController extends ChangeNotifier {
 
   Set<int> get targetHoles => _targets.keys.toSet();
 
-  Duration get duration => winner == null
-      ? (_startedAt == null
-            ? Duration.zero
-            : DateTime.now().difference(_startedAt!))
-      : _duration;
+  /// 连续多少手没有新棋子进营，供测试校验悔棋后的恢复。
+  @visibleForTesting
+  int get quietPlies => _quietPlies;
+
+  Duration get _elapsed => _startedAt == null
+      ? Duration.zero
+      : DateTime.now().difference(_startedAt!);
+
+  Duration get duration => isFinished ? _duration : _elapsed;
 
   bool get canUndo {
     if (history.isEmpty) return false;
@@ -102,9 +106,6 @@ class CheckersController extends ChangeNotifier {
 
   int progressOf(int seat) =>
       rules.progress(board, seat, setup.targetArmOf(seat));
-
-  int distanceToGoal(int hole, int seat) =>
-      geometry.distancesToArm(setup.targetArmOf(seat))[hole];
 
   /// 选中棋子后可以直接落子的孔位。
   Map<int, CheckersMove> get targets => Map.unmodifiable(_targets);
@@ -133,14 +134,14 @@ class CheckersController extends ChangeNotifier {
       return;
     }
     if (selectedHole != null) {
-      selectedHole = null;
-      _targets.clear();
+      _clearSelection();
       notifyListeners();
     }
   }
 
   void _select(int hole) {
     selectedHole = hole;
+    if (hintMove != null && hintMove!.from != hole) hintMove = null;
     _targets.clear();
     for (final move in rules.movesFrom(board, hole)) {
       final existing = _targets[move.to];
@@ -151,6 +152,11 @@ class CheckersController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void _clearSelection() {
+    selectedHole = null;
+    _targets.clear();
+  }
+
   void applyMove(CheckersMove move) {
     if (_disposed) return;
     _undoStack.add(
@@ -158,6 +164,9 @@ class CheckersController extends ChangeNotifier {
         cells: List<int>.of(board.cells),
         seat: currentSeat,
         historyLength: history.length,
+        quietPlies: _quietPlies,
+        winner: winner,
+        isDraw: isDraw,
       ),
     );
     final progressBefore = progressOf(currentSeat);
@@ -167,45 +176,44 @@ class CheckersController extends ChangeNotifier {
     _quietPlies = progressOf(currentSeat) > progressBefore
         ? 0
         : _quietPlies + 1;
-    selectedHole = null;
-    _targets.clear();
+    _clearSelection();
     hintMove = null;
     final mover = currentSeat;
 
     if (rules.hasWon(board, mover, setup.targetArmOf(mover))) {
-      winner = mover;
-      _duration = _startedAt == null
-          ? Duration.zero
-          : DateTime.now().difference(_startedAt!);
-      LogService.info(
-        '对局结束: ${setup.seatLabel(mover)} 获胜, ${history.length} 步, '
-        '${_duration.inSeconds}s',
+      _endGame(
+        winner: mover,
+        message:
+            '对局结束: ${setup.seatLabel(mover)} 获胜, ${history.length} 步, '
+            '${_elapsed.inSeconds}s',
       );
-      notifyListeners();
       return;
     }
 
     if (_quietPlies >= maxQuietPlies) {
-      isDraw = true;
-      _duration = _startedAt == null
-          ? Duration.zero
-          : DateTime.now().difference(_startedAt!);
-      LogService.warning('对局判和: 连续 $maxQuietPlies 步没有棋子进营');
-      notifyListeners();
+      _endGame(message: '对局判和: 连续 $maxQuietPlies 步没有棋子进营');
       return;
     }
 
     if (!_advanceTurn()) {
-      isDraw = true;
-      _duration = _startedAt == null
-          ? Duration.zero
-          : DateTime.now().difference(_startedAt!);
-      LogService.warning('对局陷入僵局: 所有玩家均无合法着法');
-      notifyListeners();
+      _endGame(message: '对局判和: 所有玩家均无合法着法');
       return;
     }
     notifyListeners();
     _scheduleAiIfNeeded();
+  }
+
+  /// 统一收尾：记录结果、冻结用时并通知界面。
+  void _endGame({int? winner, required String message}) {
+    this.winner = winner;
+    isDraw = winner == null;
+    _duration = _elapsed;
+    if (winner == null) {
+      LogService.warning(message);
+    } else {
+      LogService.info(message);
+    }
+    notifyListeners();
   }
 
   /// 轮到下一位仍有棋可走的玩家；全部无棋可走时返回 false。
@@ -233,14 +241,11 @@ class CheckersController extends ChangeNotifier {
       if (move == null) {
         final advanced = _advanceTurn();
         if (!advanced) {
-          isDraw = true;
-          _duration = _startedAt == null
-              ? Duration.zero
-              : DateTime.now().difference(_startedAt!);
-          LogService.warning('对局陷入僵局: 所有玩家均无合法着法');
+          _endGame(message: '对局判和: 所有玩家均无合法着法');
+        } else {
+          notifyListeners();
+          _scheduleAiIfNeeded();
         }
-        notifyListeners();
-        if (advanced) _scheduleAiIfNeeded();
         return;
       }
       applyMove(move);
@@ -259,11 +264,7 @@ class CheckersController extends ChangeNotifier {
       if (setup.mode == PlayMode.local) break;
       if (currentSeat == setup.humanSeat) break;
     }
-    winner = null;
-    isDraw = false;
-    _quietPlies = 0;
-    selectedHole = null;
-    _targets.clear();
+    _clearSelection();
     hintMove = null;
     notifyListeners();
     _scheduleAiIfNeeded();
@@ -272,6 +273,9 @@ class CheckersController extends ChangeNotifier {
   void _restore(_Snapshot snapshot) {
     board = CheckersBoard(snapshot.cells);
     currentSeat = snapshot.seat;
+    winner = snapshot.winner;
+    isDraw = snapshot.isDraw;
+    _quietPlies = snapshot.quietPlies;
     while (history.length > snapshot.historyLength) {
       history.removeLast();
     }
@@ -293,9 +297,8 @@ class CheckersController extends ChangeNotifier {
     currentSeat = 0;
     winner = null;
     isDraw = false;
-    selectedHole = null;
+    _clearSelection();
     hintMove = null;
-    _targets.clear();
     history.clear();
     _undoStack.clear();
     _duration = Duration.zero;
@@ -332,9 +335,15 @@ class _Snapshot {
     required this.cells,
     required this.seat,
     required this.historyLength,
+    required this.quietPlies,
+    required this.winner,
+    required this.isDraw,
   });
 
   final List<int> cells;
   final int seat;
   final int historyLength;
+  final int quietPlies;
+  final int? winner;
+  final bool isDraw;
 }

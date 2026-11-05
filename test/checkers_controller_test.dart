@@ -201,4 +201,42 @@ void main() {
       }
     }
   });
+
+  test('悔棋恢复停摆计数，不会把已有的停滞记录直接清零', () {
+    final controller = build();
+    controller.start();
+    final rules = CheckersRules(controller.geometry);
+    for (var i = 0; i < 2; i++) {
+      controller.applyMove(
+        rules.legalMoves(controller.board, controller.currentSeat).first,
+      );
+    }
+    expect(controller.quietPlies, 2);
+
+    controller.undo();
+
+    expect(controller.quietPlies, 1);
+  });
+
+  test('选中另一枚棋子时清除上一枚棋子的提示', () {
+    final controller = build();
+    controller.start();
+    controller.requestHint();
+    final hint = controller.hintMove!;
+    final rules = CheckersRules(controller.geometry);
+
+    controller.tapHole(hint.from);
+    expect(controller.hintMove, same(hint));
+
+    final other = controller.board
+        .holesOf(0)
+        .firstWhere(
+          (hole) =>
+              hole != hint.from &&
+              rules.movesFrom(controller.board, hole).isNotEmpty,
+        );
+    controller.tapHole(other);
+
+    expect(controller.hintMove, isNull);
+  });
 }
