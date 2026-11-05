@@ -1,6 +1,6 @@
 # 中国跳棋 🎯
 
-基于 Flutter + Flame 的中国跳棋，支持 Android、Windows 与 Web。经典 121 孔六角星棋盘，支持 2 / 3 / 4 / 6 人对局，内置三档电脑对手、连跳提示与悔棋。
+基于 Flutter + Flame 的中国跳棋，支持 Android、Windows 与 Web。经典 121 孔六角星棋盘，支持 2 / 3 / 4 / 6 人对局，内置三档电脑对手、连跳提示、悔棋与对局复盘。
 
 ## 功能
 
@@ -10,6 +10,7 @@
 - 👥 同屏对战：2 / 3 / 4 / 6 人轮流落子，适合面对面手谈
 - 💡 提示：一键给出推荐走法，金色折线标注完整连跳路径，6 秒后自动收起
 - ↩️ 悔棋与重开：人机模式一次回到自己上一次走棋之前
+- 🎞️ 对局复盘：终局后逐手回看、拖动进度、跳转开局 / 终局与自动播放，棋谱标注每手进营数
 - 🏁 进营进度：每位玩家的实时进度条与 0/10 计数，终局弹窗展示步数与用时
 - ✨ Flame 棋盘：立体星形底板、木纹孔位、高光棋子、跳跃弧线与落点高亮
 - 🎬 动画队列：连续落子按顺序播放，长连跳不会被电脑回棋截断
@@ -24,13 +25,13 @@
 
 ## 下载
 
-v0.1.2（最新）：[Gitea Release](http://192.168.31.120:3020/GTech/flutter-chinese-checkers/releases/tag/v0.1.2)
+v0.2.0（最新）：[Gitea Release](http://192.168.31.120:3020/GTech/flutter-chinese-checkers/releases/tag/v0.2.0)
 
 | 平台 | 产物 |
 | --- | --- |
-| Android (arm64) | `flutter-chinese-checkers-0.1.2-android-aarch64.apk` |
-| Windows (x64, Win10+) | `flutter-chinese-checkers-0.1.2-windows-x86_64.zip` |
-| Web | `flutter-chinese-checkers-0.1.2-web.zip`（解压后起静态服务器） |
+| Android (arm64) | `flutter-chinese-checkers-0.2.0-android-aarch64.apk` |
+| Windows (x64, Win10+) | `flutter-chinese-checkers-0.2.0-windows-x86_64.zip` |
+| Web | `flutter-chinese-checkers-0.2.0-web.zip`（解压后起静态服务器） |
 
 ## 规则
 
@@ -75,6 +76,7 @@ lib/
 
 | 版本 | 说明 |
 | --- | --- |
+| v0.2.0 | 新增对局复盘：逐手回看、进度跳转、自动播放与带进营标注的棋谱 |
 | v0.1.2 | 重构终局处理与悔棋快照，连续落子动画改为队列播放，清理无用代码 |
 | v0.1.1 | 修复窄屏日志弹窗溢出，收紧人机座位边界并补充对局页用例 |
 | v0.1.0 | 首个版本：121 孔六角星棋盘、2/3/4/6 人对局、三档电脑对手、提示与悔棋、三套棋盘配色与合成音效 |
