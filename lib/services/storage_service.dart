@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/game_models.dart';
+import '../models/match_record.dart';
 import '../utils/constants.dart';
 
 /// 轻量偏好存储：写入失败时静默忽略，不影响对局主流程。
@@ -78,4 +81,31 @@ class StorageService {
 
   Future<void> setHumanSeat(int value) =>
       _write((p) => p.setInt(AppConstants.prefKeyHumanSeat, value));
+
+  /// 已保存的对局摘要，按时间倒序；损坏的记录会被跳过。
+  List<MatchRecord> get matches {
+    final lines =
+        _p.getStringList(AppConstants.prefKeyMatches) ?? const <String>[];
+    final records = <MatchRecord>[];
+    for (final line in lines) {
+      try {
+        final record = MatchRecord.tryParse(jsonDecode(line));
+        if (record != null) records.add(record);
+      } catch (_) {}
+    }
+    return List.unmodifiable(records);
+  }
+
+  /// 追加一局摘要，只保留最近 [AppConstants.maxStoredMatches] 局。
+  Future<void> addMatch(MatchRecord record) => _write((p) async {
+    final lines = p.getStringList(AppConstants.prefKeyMatches) ?? <String>[];
+    final next = <String>[jsonEncode(record.toJson()), ...lines];
+    if (next.length > AppConstants.maxStoredMatches) {
+      next.removeRange(AppConstants.maxStoredMatches, next.length);
+    }
+    return p.setStringList(AppConstants.prefKeyMatches, next);
+  });
+
+  Future<void> clearMatches() =>
+      _write((p) => p.remove(AppConstants.prefKeyMatches));
 }

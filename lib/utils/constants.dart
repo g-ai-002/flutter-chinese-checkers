@@ -28,4 +28,8 @@ class AppConstants {
   static const String prefKeyPlayerCount = 'player_count';
   static const String prefKeyDifficulty = 'difficulty';
   static const String prefKeyHumanSeat = 'human_seat';
+  static const String prefKeyMatches = 'match_history';
+
+  /// 偏好存储里保留的对局摘要上限，避免历史无限增长。
+  static const int maxStoredMatches = 60;
 }

@@ -92,4 +92,18 @@ void main() {
     expect(find.textContaining('跨过任意一枚相邻棋子'), findsOneWidget);
     expect(find.text('知道了'), findsOneWidget);
   });
+
+  testWidgets('首页统计入口在无记录时提示先完成一局', (tester) async {
+    final settings = await boot();
+    await tester.pumpWidget(wrap(settings));
+
+    expect(find.text('对局统计'), findsOneWidget);
+    expect(find.text('完成第一局后查看胜率与亮点'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('对局统计'));
+    await tester.tap(find.text('对局统计'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('还没有对局记录'), findsOneWidget);
+  });
 }

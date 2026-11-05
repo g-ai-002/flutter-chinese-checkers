@@ -4,10 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../models/game_models.dart';
+import '../models/match_summary.dart';
 import '../providers/settings_provider.dart';
 import '../utils/constants.dart';
 import 'game_page.dart';
 import 'settings_page.dart';
+import 'stats_page.dart';
 import 'widgets/game_dialogs.dart';
 import 'widgets/setup_sheet.dart';
 import 'widgets/star_preview.dart';
@@ -92,7 +94,12 @@ class HomePage extends StatelessWidget {
                           onTap: () =>
                               _start(context, settings, PlayMode.local),
                         ),
-                        const SizedBox(height: 22),
+                        const SizedBox(height: 12),
+                        _StatsCard(
+                          summary: settings.matchSummary,
+                          onTap: () => _openStats(context),
+                        ),
+                        const SizedBox(height: 18),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -151,6 +158,11 @@ class HomePage extends StatelessWidget {
   void _openSettings(BuildContext context) {
     Navigator.of(context)
         .push(MaterialPageRoute<void>(builder: (_) => const SettingsPage()));
+  }
+
+  void _openStats(BuildContext context) {
+    Navigator.of(context)
+        .push(MaterialPageRoute<void>(builder: (_) => const StatsPage()));
   }
 }
 
@@ -258,6 +270,83 @@ class _Tag extends StatelessWidget {
           const SizedBox(width: 5),
           Text(text, style: theme.textTheme.bodySmall),
         ],
+      ),
+    );
+  }
+}
+
+class _StatsCard extends StatelessWidget {
+  const _StatsCard({required this.summary, required this.onTap});
+
+  final MatchSummary summary;
+  final VoidCallback onTap;
+
+  String get _subtitle {
+    if (summary.total == 0) return '完成第一局后查看胜率与亮点';
+    final parts = <String>['已下 ${summary.total} 局'];
+    if (summary.aiGames > 0) {
+      parts.add('人机胜率 ${summary.winPercent}%');
+    } else {
+      parts.add('同屏 ${summary.localGames} 局');
+    }
+    if (summary.longestJump > 0) {
+      parts.add('最长连跳 ×${summary.longestJump}');
+    }
+    return parts.join(' · ');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final color = theme.colorScheme.secondary;
+    return Material(
+      color: theme.colorScheme.surface,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: theme.colorScheme.outline),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.13),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(Icons.query_stats, color: color, size: 21),
+              ),
+              const SizedBox(width: 13),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('对局统计', style: theme.textTheme.titleSmall),
+                    const SizedBox(height: 2),
+                    Text(
+                      _subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

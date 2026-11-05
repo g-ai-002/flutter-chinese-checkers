@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../models/game_models.dart';
+import '../models/match_record.dart';
+import '../models/match_summary.dart';
 import '../services/music_service.dart';
 import '../services/sound_service.dart';
 import '../services/storage_service.dart';
@@ -58,6 +60,15 @@ class SettingsProvider extends ChangeNotifier {
   int get humanSeat => _storage.humanSeatFor(playerCount.count);
   Future<void> setHumanSeat(int value) =>
       _update(() => _storage.setHumanSeat(value));
+
+  List<MatchRecord> get matches => _storage.matches;
+
+  MatchSummary get matchSummary => MatchSummary.fromRecords(matches);
+
+  Future<void> recordMatch(MatchRecord record) =>
+      _update(() => _storage.addMatch(record));
+
+  Future<void> clearMatches() => _update(_storage.clearMatches);
 
   void _syncFeedback() =>
       SoundService.configure(sound: soundEnabled, haptics: hapticsEnabled);

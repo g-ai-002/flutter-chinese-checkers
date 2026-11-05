@@ -14,3 +14,14 @@ String formatLogTimestamp(DateTime time) =>
 
 String formatLogLine(DateTime time, String level, String message) =>
     '[${formatLogTimestamp(time)}][$level] $message';
+
+/// `mm:ss`，对局用时与统计平均值共用。
+String formatDuration(Duration duration) {
+  final minutes = duration.inMinutes;
+  final seconds = duration.inSeconds % 60;
+  return '${pad2(minutes)}:${pad2(seconds)}';
+}
+
+/// `MM-dd HH:mm`，统计页的紧凑时间。
+String formatShortDateTime(DateTime time) =>
+    '${pad2(time.month)}-${pad2(time.day)} ${pad2(time.hour)}:${pad2(time.minute)}';

@@ -1,7 +1,11 @@
+import 'dart:convert';
+
 import 'package:chinese_checkers/models/game_models.dart';
+import 'package:chinese_checkers/models/match_record.dart';
 import 'package:chinese_checkers/providers/settings_provider.dart';
 import 'package:chinese_checkers/services/storage_service.dart';
 import 'package:chinese_checkers/theme/app_theme.dart';
+import 'package:chinese_checkers/utils/constants.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -96,5 +100,79 @@ void main() {
         expect(setup.seatLabel(seat), isNotEmpty);
       }
     }
+  });
+
+  MatchRecord record(int winner, {int moves = 40}) => MatchRecord(
+    playedAt: DateTime(2026, 11, 5, 10, winner),
+    mode: PlayMode.vsAi,
+    playerCount: PlayerCount.two,
+    difficulty: Difficulty.normal,
+    humanSeat: 0,
+    winner: winner,
+    moves: moves,
+    duration: const Duration(minutes: 3),
+    longestJump: 2,
+    opening: '连跳 ×2',
+    winnerMoves: 28,
+  );
+
+  test('对局摘要按时间倒序保存，并可清空', () async {
+    final storage = await StorageService.instance;
+    await storage.addMatch(record(0));
+    await storage.addMatch(record(1, moves: 55));
+
+    final matches = storage.matches;
+    expect(matches, hasLength(2));
+    expect(matches.first.winner, 1);
+    expect(matches.last.winner, 0);
+    expect(matches.first.opening, '连跳 ×2');
+
+    StorageService.resetForTests();
+    final reopened = await StorageService.instance;
+    expect(reopened.matches, hasLength(2));
+
+    await reopened.clearMatches();
+    expect(reopened.matches, isEmpty);
+  });
+
+  test('对局摘要只保留最近的上限数量', () async {
+    final storage = await StorageService.instance;
+    for (var i = 0; i < AppConstants.maxStoredMatches + 4; i++) {
+      await storage.addMatch(record(i.isEven ? 0 : 1, moves: 20 + i));
+    }
+
+    final matches = storage.matches;
+    expect(matches, hasLength(AppConstants.maxStoredMatches));
+    expect(matches.first.moves, 20 + AppConstants.maxStoredMatches + 3);
+    expect(matches.last.moves, 24);
+  });
+
+  test('损坏的摘要行被跳过，不影响其余记录', () async {
+    SharedPreferences.setMockInitialValues({
+      AppConstants.prefKeyMatches: [
+        'not-json',
+        jsonEncode(record(0).toJson()),
+        '[]',
+      ],
+    });
+    final storage = await StorageService.instance;
+
+    expect(storage.matches, hasLength(1));
+    expect(storage.matches.single.winner, 0);
+  });
+
+  test('记录对局会通知界面并刷新统计', () async {
+    final storage = await StorageService.instance;
+    final settings = SettingsProvider(storage);
+    var notified = 0;
+    settings.addListener(() => notified++);
+
+    await settings.recordMatch(record(0));
+    await settings.recordMatch(record(1));
+
+    expect(notified, 2);
+    expect(settings.matches, hasLength(2));
+    expect(settings.matchSummary.total, 2);
+    expect(settings.matchSummary.wins, 1);
   });
 }
