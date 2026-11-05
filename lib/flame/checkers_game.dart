@@ -48,4 +48,10 @@ class CheckersGame extends FlameGame {
       ..size = size.clone()
       ..position = Vector2.zero();
   }
+
+  @override
+  void onRemove() {
+    _theme.dispose();
+    super.onRemove();
+  }
 }

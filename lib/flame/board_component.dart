@@ -7,12 +7,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../game/board_geometry.dart';
+import '../game/checkers_board.dart';
 import '../game/checkers_controller.dart';
-import '../game/checkers_rules.dart';
 import '../models/game_models.dart';
 import '../services/sound_service.dart';
 import '../theme/app_theme.dart';
 import '../theme/player_palette.dart';
+import 'move_animator.dart';
 
 /// 棋盘绘制尺寸（单位：孔距）。
 const double _contentHalfWidth = 7.0;
@@ -36,7 +37,8 @@ class BoardComponent extends PositionComponent with TapCallbacks {
   Offset _origin = Offset.zero;
   double _rotation = 0;
   int _seenHistory = 0;
-  _MoveAnim? _anim;
+  late CheckersBoard _mirror;
+  final MoveAnimator _animator = MoveAnimator();
   double _time = 0;
 
   double _cacheScale = 0;
@@ -49,12 +51,15 @@ class BoardComponent extends PositionComponent with TapCallbacks {
 
   @override
   Future<void> onLoad() async {
+    _mirror = controller.board.copy();
+    _seenHistory = controller.history.length;
     theme.addListener(_invalidate);
   }
 
   @override
   void onRemove() {
     theme.removeListener(_invalidate);
+    _animator.clear();
     _disposeLayers();
     super.onRemove();
   }
@@ -78,27 +83,26 @@ class BoardComponent extends PositionComponent with TapCallbacks {
   void update(double dt) {
     super.update(dt);
     _time += dt;
-    final count = controller.history.length;
-    if (count == _seenHistory) {
-      _animate(dt);
-      return;
-    }
-    if (count < _seenHistory) {
-      _seenHistory = count;
-      _anim = null;
-      return;
-    }
-    final record = controller.history.last;
-    _seenHistory = count;
-    _anim = _MoveAnim(record.move);
-    _animate(0);
+    _syncHistory();
+    _animator.advance(dt);
   }
 
-  void _animate(double dt) {
-    final anim = _anim;
-    if (anim == null) return;
-    anim.elapsed += dt;
-    if (anim.elapsed >= anim.duration) _anim = null;
+  /// 把控制器新增的着法逐手补进动画队列，每手保存走完后的局面快照。
+  void _syncHistory() {
+    final records = controller.history;
+    if (records.length < _seenHistory) {
+      _seenHistory = records.length;
+      _mirror = controller.board.copy();
+      _animator.clear();
+      return;
+    }
+    if (records.length == _seenHistory) return;
+    for (var i = _seenHistory; i < records.length; i++) {
+      final move = records[i].move;
+      _mirror.move(move.from, move.to);
+      _animator.enqueue(move, _mirror.cells);
+    }
+    _seenHistory = records.length;
   }
 
   @override
@@ -121,15 +125,19 @@ class BoardComponent extends PositionComponent with TapCallbacks {
     _rotation = _rotationForHome();
     _ensureLayers(scale);
 
+    final anim = _animator.current;
+    final cells = anim?.cells ?? controller.board.cells;
     canvas.save();
     canvas.translate(_origin.dx, _origin.dy);
     canvas.rotate(_rotation);
     final layer = _boardLayer;
     if (layer != null) canvas.drawPicture(layer);
-    _drawSelection(canvas);
-    _drawTargets(canvas);
-    _drawPieces(canvas);
-    _drawHint(canvas);
+    if (anim == null) {
+      _drawSelection(canvas, cells);
+      _drawTargets(canvas);
+      _drawHint(canvas);
+    }
+    _drawPieces(canvas, cells, anim);
     canvas.restore();
   }
 
@@ -276,11 +284,11 @@ class BoardComponent extends PositionComponent with TapCallbacks {
     }
   }
 
-  void _drawSelection(Canvas canvas) {
+  void _drawSelection(Canvas canvas, List<int> cells) {
     final hole = controller.selectedHole;
-    if (hole == null) return;
+    if (hole == null || cells[hole] < 0) return;
     final center = _point(hole);
-    final style = playerStyleOf(controller.board.at(hole));
+    final style = playerStyleOf(cells[hole]);
     final radius = _scale * 0.47;
     canvas.drawCircle(
       center,
@@ -390,30 +398,23 @@ class BoardComponent extends PositionComponent with TapCallbacks {
     canvas.drawPath(path, Paint()..color = color);
   }
 
-  void _drawPieces(Canvas canvas) {
-    final anim = _anim;
+  void _drawPieces(Canvas canvas, List<int> cells, MoveAnimation? anim) {
     final hiddenHole = anim?.move.to;
-    for (var hole = 0; hole < controller.board.length; hole++) {
-      final seat = controller.board.at(hole);
+    for (var hole = 0; hole < cells.length; hole++) {
+      final seat = cells[hole];
       if (seat < 0 || hole == hiddenHole) continue;
       _drawPiece(canvas, _point(hole), seat);
     }
-    if (anim != null) {
-      final position = _animPosition(anim);
-      final lift = _animLift(anim);
-      _drawPiece(
-        canvas,
-        position - Offset(0, lift),
-        controller.board.at(anim.move.to),
-      );
-    }
+    if (anim == null) return;
+    final position = _animPosition(anim);
+    final lift = _animLift(anim);
+    _drawPiece(canvas, position - Offset(0, lift), cells[anim.move.to]);
   }
 
-  Offset _animPosition(_MoveAnim anim) {
-    final progress = (anim.elapsed / anim.duration).clamp(0.0, 1.0);
+  Offset _animPosition(MoveAnimation anim) {
     final path = anim.move.path;
     final segments = path.length - 1;
-    final scaled = progress * segments;
+    final scaled = anim.progress * segments;
     final index = math.min(segments - 1, scaled.floor());
     final local = _ease(scaled - index);
     final from = _point(path[index]);
@@ -421,12 +422,11 @@ class BoardComponent extends PositionComponent with TapCallbacks {
     return Offset.lerp(from, to, local)!;
   }
 
-  double _animLift(_MoveAnim anim) {
+  double _animLift(MoveAnimation anim) {
     if (!anim.move.jump) return 0;
     final path = anim.move.path;
     final segments = path.length - 1;
-    final progress = (anim.elapsed / anim.duration).clamp(0.0, 1.0);
-    final scaled = progress * segments;
+    final scaled = anim.progress * segments;
     final local = scaled - scaled.floor();
     return math.sin(local * math.pi) * _scale * 0.30;
   }
@@ -540,13 +540,4 @@ class BoardComponent extends PositionComponent with TapCallbacks {
 
   @visibleForTesting
   double get boardScale => _scale;
-}
-
-class _MoveAnim {
-  _MoveAnim(this.move)
-    : duration = 0.16 + 0.13 * (move.landings.length - 1).clamp(0, 6);
-
-  final CheckersMove move;
-  final double duration;
-  double elapsed = 0;
 }
