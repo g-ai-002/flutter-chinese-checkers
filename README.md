@@ -25,13 +25,13 @@
 
 ## 下载
 
-v0.2.0（最新）：[Gitea Release](http://192.168.31.120:3020/GTech/flutter-chinese-checkers/releases/tag/v0.2.0)
+v0.2.1（最新）：[Gitea Release](http://192.168.31.120:3020/GTech/flutter-chinese-checkers/releases/tag/v0.2.1)
 
 | 平台 | 产物 |
 | --- | --- |
-| Android (arm64) | `flutter-chinese-checkers-0.2.0-android-aarch64.apk` |
-| Windows (x64, Win10+) | `flutter-chinese-checkers-0.2.0-windows-x86_64.zip` |
-| Web | `flutter-chinese-checkers-0.2.0-web.zip`（解压后起静态服务器） |
+| Android (arm64) | `flutter-chinese-checkers-0.2.1-android-aarch64.apk` |
+| Windows (x64, Win10+) | `flutter-chinese-checkers-0.2.1-windows-x86_64.zip` |
+| Web | `flutter-chinese-checkers-0.2.1-web.zip`（解压后起静态服务器） |
 
 ## 规则
 
@@ -76,6 +76,7 @@ lib/
 
 | 版本 | 说明 |
 | --- | --- |
+| v0.2.1 | 重构复盘增量代码：增量跳转、控件拆分与棋谱浮层实时刷新 |
 | v0.2.0 | 新增对局复盘：逐手回看、进度跳转、自动播放与带进营标注的棋谱 |
 | v0.1.2 | 重构终局处理与悔棋快照，连续落子动画改为队列播放，清理无用代码 |
 | v0.1.1 | 修复窄屏日志弹窗溢出，收紧人机座位边界并补充对局页用例 |
