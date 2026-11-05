@@ -6,6 +6,7 @@ import '../game/checkers_controller.dart';
 import '../models/game_models.dart';
 import '../providers/settings_provider.dart';
 import '../services/sound_service.dart';
+import '../utils/constants.dart';
 import 'widgets/board_stage.dart';
 import 'widgets/game_dialogs.dart';
 import 'widgets/players_panel.dart';
@@ -171,7 +172,7 @@ class _GamePageState extends State<GamePage> {
           top: false,
           child: LayoutBuilder(
             builder: (context, constraints) {
-              final wide = constraints.maxWidth >= 920;
+              final wide = constraints.maxWidth >= kGameWideBreakpoint;
               return wide ? _buildWide(theme) : _buildCompact(theme);
             },
           ),

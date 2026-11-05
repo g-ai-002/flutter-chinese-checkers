@@ -35,8 +35,10 @@ class HomePage extends StatelessWidget {
         child: SafeArea(
           child: LayoutBuilder(
             builder: (context, constraints) {
-              final wide = constraints.maxWidth >= 780;
-              final horizontal = constraints.maxWidth >= 900 ? 36.0 : 20.0;
+              final wide = constraints.maxWidth >= kHomeWideBreakpoint;
+              final horizontal = constraints.maxWidth >= kHomePaddingBreakpoint
+                  ? 36.0
+                  : 20.0;
               return SingleChildScrollView(
                 padding: EdgeInsets.fromLTRB(horizontal, 10, horizontal, 28),
                 child: Center(
