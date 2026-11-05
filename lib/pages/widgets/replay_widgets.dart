@@ -195,6 +195,10 @@ class ReplayMoveList extends StatelessWidget {
             ),
           ),
           Divider(height: 1, color: theme.colorScheme.outline),
+          if (controller.hasBestMove) ...[
+            _BestMoveBar(controller: controller),
+            Divider(height: 1, color: theme.colorScheme.outline),
+          ],
           Expanded(
             child: ListView.builder(
               controller: scrollController,
@@ -210,6 +214,57 @@ class ReplayMoveList extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// 本局最佳着法：点击直接跳到那一手。
+class _BestMoveBar extends StatelessWidget {
+  const _BestMoveBar({required this.controller});
+
+  final ReplayController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final step = controller.bestStep!;
+    final number = controller.bestMoveNumber!;
+    final suffix = step.landedInCamp ? ' · 进营' : '';
+    return Material(
+      color: theme.colorScheme.tertiary.withValues(alpha: 0.08),
+      child: InkWell(
+        onTap: () => controller.seekTo(number),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 8, 10, 8),
+          child: Row(
+            children: [
+              Icon(
+                Icons.auto_awesome,
+                size: 15,
+                color: theme.colorScheme.tertiary,
+              ),
+              const SizedBox(width: 7),
+              Expanded(
+                child: Text(
+                  '最佳着法 第 $number 手 · '
+                  '${describeMove(step.record.move)}$suffix',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.tertiary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Icon(
+                Icons.chevron_right,
+                size: 16,
+                color: theme.colorScheme.tertiary,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -306,6 +361,15 @@ class _MoveTile extends StatelessWidget {
                     ],
                   ),
                 ),
+                if (position == controller.bestMoveNumber)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 4),
+                    child: Icon(
+                      Icons.auto_awesome,
+                      size: 14,
+                      color: theme.colorScheme.tertiary,
+                    ),
+                  ),
                 if (step != null && step.landedInCamp)
                   Container(
                     padding: const EdgeInsets.symmetric(

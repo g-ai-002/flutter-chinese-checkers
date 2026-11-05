@@ -16,6 +16,8 @@ class ReplayStep {
     required this.record,
     required this.progress,
     required this.landedInCamp,
+    required this.progressGain,
+    required this.score,
   });
 
   final MoveRecord record;
@@ -25,6 +27,12 @@ class ReplayStep {
 
   /// 这一手是否把棋子直接送进了目标营地。
   final bool landedInCamp;
+
+  /// 这一手让本方营地里的棋子增加了多少（通常为 0 或 1）。
+  final int progressGain;
+
+  /// 复盘亮点评分：进营权重最高，其次是比较连跳长度。
+  final int score;
 }
 
 /// 复盘控制器：按记录逐手重建局面，支持前后跳转与自动播放。
@@ -54,6 +62,7 @@ class ReplayController extends ChangeNotifier implements BoardSource {
   final List<MoveRecord> _records;
   final List<ReplayStep> _steps = [];
   final List<MoveRecord> _visible = [];
+  int? _bestIndex;
   late final UnmodifiableListView<MoveRecord> _historyView =
       UnmodifiableListView(_visible);
   late final UnmodifiableListView<ReplayStep> _stepsView = UnmodifiableListView(
@@ -102,18 +111,46 @@ class ReplayController extends ChangeNotifier implements BoardSource {
   /// 当前进度对应的最后一手，开局为 null。
   ReplayStep? get currentStep => _index == 0 ? null : _steps[_index - 1];
 
+  /// 本局最佳着法的序号（1 起），没有可圈可点的着法时为 null。
+  int? get bestMoveNumber {
+    final index = _bestIndex;
+    return index == null ? null : index + 1;
+  }
+
+  ReplayStep? get bestStep {
+    final index = _bestIndex;
+    return index == null ? null : _steps[index];
+  }
+
+  /// 只有进营或跳跃才算亮点，纯单步的开局不强行制造「最佳」。
+  bool get hasBestMove => (bestStep?.score ?? 0) > 0;
+
   void _buildSteps() {
     final probe = CheckersBoard.initial(geometry, setup.seatArms);
+    final progressBySeat = List<int>.filled(setup.players, 0);
     for (final record in _records) {
-      probe.move(record.move.from, record.move.to);
       final targetArm = setup.targetArmOf(record.seat);
+      final before = progressBySeat[record.seat];
+      probe.move(record.move.from, record.move.to);
+      final progress = probe.countInArm(geometry, record.seat, targetArm);
+      progressBySeat[record.seat] = progress;
+      final gain = progress - before;
+      final landedInCamp = geometry.armOf(record.move.to) == targetArm;
+      final score =
+          gain * 100 + record.move.jumpCount * 10 + (landedInCamp ? 5 : 0);
       _steps.add(
         ReplayStep(
           record: record,
-          progress: probe.countInArm(geometry, record.seat, targetArm),
-          landedInCamp: geometry.armOf(record.move.to) == targetArm,
+          progress: progress,
+          landedInCamp: landedInCamp,
+          progressGain: gain,
+          score: score,
         ),
       );
+    }
+    for (var i = 0; i < _steps.length; i++) {
+      final best = _bestIndex;
+      if (best == null || _steps[i].score > _steps[best].score) _bestIndex = i;
     }
   }
 

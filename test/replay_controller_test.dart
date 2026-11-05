@@ -27,6 +27,49 @@ void main() {
     return records;
   }
 
+  /// 双方按「能跳就跳」走子，直到出现第一手跳跃，用于覆盖最佳着法。
+  List<MoveRecord> recordsUntilJump({int limit = 200}) {
+    final geometry = BoardGeometry.star();
+    final board = CheckersBoard.initial(geometry, setup.seatArms);
+    final rules = CheckersRules(geometry);
+    final records = <MoveRecord>[];
+    var seat = 0;
+    for (var i = 0; i < limit; i++) {
+      final moves = rules.legalMoves(board, seat);
+      CheckersMove? jump;
+      for (final move in moves) {
+        if (move.jump) {
+          jump = move;
+          break;
+        }
+      }
+      final move = jump ?? moves.first;
+      board.move(move.from, move.to);
+      records.add(MoveRecord(seat: seat, move: move));
+      seat = (seat + 1) % setup.players;
+      if (jump != null) return records;
+    }
+    fail('前 $limit 手内没有出现跳跃');
+  }
+
+  /// 只走单步，确保没有跳跃亮点。
+  List<MoveRecord> stepRecords(int count) {
+    final geometry = BoardGeometry.star();
+    final board = CheckersBoard.initial(geometry, setup.seatArms);
+    final rules = CheckersRules(geometry);
+    final records = <MoveRecord>[];
+    var seat = 0;
+    for (var i = 0; i < count; i++) {
+      final move = rules
+          .legalMoves(board, seat)
+          .firstWhere((candidate) => !candidate.jump);
+      board.move(move.from, move.to);
+      records.add(MoveRecord(seat: seat, move: move));
+      seat = (seat + 1) % setup.players;
+    }
+    return records;
+  }
+
   test('开局状态为初始营地，历史为空', () {
     final replay = ReplayController(setup: setup, records: sampleRecords(4));
 
@@ -226,5 +269,53 @@ void main() {
     expect(describeMove(CheckersMove.step(0, 1)), '单步');
     expect(describeMove(CheckersMove.jump(0, const [2])), '单跳');
     expect(describeMove(CheckersMove.jump(0, const [2, 4, 6])), '连跳 ×3');
+  });
+
+  test('最佳着法定位到评分最高的一手并可跳转', () {
+    final records = recordsUntilJump();
+    final replay = ReplayController(setup: setup, records: records);
+
+    expect(replay.hasBestMove, isTrue);
+    expect(replay.bestMoveNumber, isNotNull);
+    expect(replay.bestStep, isNotNull);
+    expect(replay.bestStep!.score, greaterThan(0));
+
+    var expected = 0;
+    for (var i = 1; i < replay.steps.length; i++) {
+      if (replay.steps[i].score > replay.steps[expected].score) expected = i;
+    }
+    expect(replay.bestMoveNumber, expected + 1);
+
+    replay.seekTo(replay.bestMoveNumber!);
+    expect(replay.index, replay.bestMoveNumber);
+    expect(replay.currentStep, same(replay.bestStep));
+    replay.dispose();
+  });
+
+  test('进营手比普通连跳得分更高', () {
+    final replay = ReplayController(setup: setup, records: recordsUntilJump());
+    for (final step in replay.steps) {
+      final expected =
+          step.progressGain * 100 +
+          step.record.move.jumpCount * 10 +
+          (step.landedInCamp ? 5 : 0);
+      expect(step.score, expected);
+    }
+    replay.dispose();
+  });
+
+  test('纯单步开局没有最佳着法亮点', () {
+    final replay = ReplayController(setup: setup, records: stepRecords(2));
+    expect(replay.steps.every((step) => step.score == 0), isTrue);
+    expect(replay.hasBestMove, isFalse);
+    replay.dispose();
+  });
+
+  test('空棋谱没有最佳着法', () {
+    final replay = ReplayController(setup: setup, records: const []);
+    expect(replay.bestMoveNumber, isNull);
+    expect(replay.bestStep, isNull);
+    expect(replay.hasBestMove, isFalse);
+    replay.dispose();
   });
 }

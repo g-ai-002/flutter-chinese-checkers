@@ -2,6 +2,7 @@ import 'package:chinese_checkers/game/board_geometry.dart';
 import 'package:chinese_checkers/game/checkers_board.dart';
 import 'package:chinese_checkers/game/checkers_rules.dart';
 import 'package:chinese_checkers/game/move_record.dart';
+import 'package:chinese_checkers/game/replay_controller.dart';
 import 'package:chinese_checkers/models/game_models.dart';
 import 'package:chinese_checkers/pages/replay_page.dart';
 import 'package:chinese_checkers/providers/settings_provider.dart';
@@ -32,9 +33,35 @@ void main() {
     return records;
   }
 
+  /// 走子和复盘控制器共用的一组带跳跃的记录。
+  List<MoveRecord> recordsUntilJump({int limit = 200}) {
+    final geometry = BoardGeometry.star();
+    final board = CheckersBoard.initial(geometry, setup.seatArms);
+    final rules = CheckersRules(geometry);
+    final records = <MoveRecord>[];
+    var seat = 0;
+    for (var i = 0; i < limit; i++) {
+      final moves = rules.legalMoves(board, seat);
+      CheckersMove? jump;
+      for (final move in moves) {
+        if (move.jump) {
+          jump = move;
+          break;
+        }
+      }
+      final move = jump ?? moves.first;
+      board.move(move.from, move.to);
+      records.add(MoveRecord(seat: seat, move: move));
+      seat = (seat + 1) % setup.players;
+      if (jump != null) return records;
+    }
+    fail('前 $limit 手内没有出现跳跃');
+  }
+
   Future<void> pumpReplay(
     WidgetTester tester, {
     int moves = 6,
+    List<MoveRecord>? records,
     Size size = const Size(1200, 900),
   }) async {
     tester.view.physicalSize = size;
@@ -51,7 +78,10 @@ void main() {
         value: settings,
         child: MaterialApp(
           theme: buildLightTheme(),
-          home: ReplayPage(setup: setup, records: sampleRecords(moves)),
+          home: ReplayPage(
+            setup: setup,
+            records: records ?? sampleRecords(moves),
+          ),
         ),
       ),
     );
@@ -122,6 +152,44 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
 
     expect(find.text('第 2 / 6 手'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('棋谱展示最佳着法，点击直接跳到该手', (tester) async {
+    final records = recordsUntilJump();
+    final probe = ReplayController(setup: setup, records: records);
+    final best = probe.bestMoveNumber!;
+    probe.dispose();
+
+    await pumpReplay(tester, records: records);
+
+    final label = find.textContaining('最佳着法 第 $best 手');
+    expect(label, findsOneWidget);
+    expect(find.byIcon(Icons.auto_awesome), findsWidgets);
+
+    await tester.tap(label);
+    await tester.pump(const Duration(milliseconds: 120));
+
+    expect(find.text('第 $best / ${records.length} 手'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('窄屏棋谱浮层同样展示最佳着法', (tester) async {
+    await pumpReplay(
+      tester,
+      records: recordsUntilJump(),
+      size: const Size(400, 820),
+    );
+
+    await tester.tap(find.byTooltip('棋谱'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.textContaining('最佳着法 第'), findsOneWidget);
     expect(tester.takeException(), isNull);
 
     await tester.pumpWidget(const SizedBox.shrink());
