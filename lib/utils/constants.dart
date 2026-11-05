@@ -14,7 +14,7 @@ class AppConstants {
   AppConstants._();
 
   static const String appName = '中国跳棋';
-  static const String version = '0.3.0';
+  static const String version = '0.3.1';
 
   /// 用户目录下的应用文件夹，日志与导出文件都放在这里。
   static const String appDirName = 'FlutterTiaoqi';
