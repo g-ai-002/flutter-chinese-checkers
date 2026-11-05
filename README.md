@@ -12,6 +12,7 @@
 - ↩️ 悔棋与重开：人机模式一次回到自己上一次走棋之前
 - 🏁 进营进度：每位玩家的实时进度条与 0/10 计数，终局弹窗展示步数与用时
 - ✨ Flame 棋盘：立体星形底板、木纹孔位、高光棋子、跳跃弧线与落点高亮
+- 🎬 动画队列：连续落子按顺序播放，长连跳不会被电脑回棋截断
 - 🔄 视角自适应：人机对战把自己的营地转到下方，前进方向朝上
 - 🎨 三套棋盘配色：竹影、暖木、夜墨，深浅色主题同步切换
 - 🔔 音效与震动：运行时合成选子 / 单步 / 连跳 / 终局音效，仓库不携带音频文件
@@ -23,13 +24,13 @@
 
 ## 下载
 
-v0.1.1（最新）：[Gitea Release](http://192.168.31.120:3020/GTech/flutter-chinese-checkers/releases/tag/v0.1.1)
+v0.1.2（最新）：[Gitea Release](http://192.168.31.120:3020/GTech/flutter-chinese-checkers/releases/tag/v0.1.2)
 
 | 平台 | 产物 |
 | --- | --- |
-| Android (arm64) | `flutter-chinese-checkers-0.1.1-android-aarch64.apk` |
-| Windows (x64, Win10+) | `flutter-chinese-checkers-0.1.1-windows-x86_64.zip` |
-| Web | `flutter-chinese-checkers-0.1.1-web.zip`（解压后起静态服务器） |
+| Android (arm64) | `flutter-chinese-checkers-0.1.2-android-aarch64.apk` |
+| Windows (x64, Win10+) | `flutter-chinese-checkers-0.1.2-windows-x86_64.zip` |
+| Web | `flutter-chinese-checkers-0.1.2-web.zip`（解压后起静态服务器） |
 
 ## 规则
 
@@ -74,5 +75,6 @@ lib/
 
 | 版本 | 说明 |
 | --- | --- |
+| v0.1.2 | 重构终局处理与悔棋快照，连续落子动画改为队列播放，清理无用代码 |
 | v0.1.1 | 修复窄屏日志弹窗溢出，收紧人机座位边界并补充对局页用例 |
 | v0.1.0 | 首个版本：121 孔六角星棋盘、2/3/4/6 人对局、三档电脑对手、提示与悔棋、三套棋盘配色与合成音效 |
