@@ -63,12 +63,23 @@ class SettingsProvider extends ChangeNotifier {
 
   List<MatchRecord> get matches => _storage.matches;
 
-  MatchSummary get matchSummary => MatchSummary.fromRecords(matches);
+  MatchSummary? _summary;
 
-  Future<void> recordMatch(MatchRecord record) =>
-      _update(() => _storage.addMatch(record));
+  /// 生涯聚合只随对局记录变化，首页与统计页共用同一份结果。
+  MatchSummary get matchSummary =>
+      _summary ??= MatchSummary.fromRecords(matches);
 
-  Future<void> clearMatches() => _update(_storage.clearMatches);
+  Future<void> recordMatch(MatchRecord record) async {
+    await _storage.addMatch(record);
+    _summary = null;
+    notifyListeners();
+  }
+
+  Future<void> clearMatches() async {
+    await _storage.clearMatches();
+    _summary = null;
+    notifyListeners();
+  }
 
   void _syncFeedback() =>
       SoundService.configure(sound: soundEnabled, haptics: hapticsEnabled);

@@ -10,6 +10,7 @@ import '../utils/constants.dart';
 class StorageService {
   static StorageService? _instance;
   SharedPreferences? _prefs;
+  List<MatchRecord>? _matches;
 
   StorageService._();
 
@@ -83,7 +84,11 @@ class StorageService {
       _write((p) => p.setInt(AppConstants.prefKeyHumanSeat, value));
 
   /// 已保存的对局摘要，按时间倒序；损坏的记录会被跳过。
+  ///
+  /// 解析结果会缓存到下一次写入，界面重建时不必反复解码 JSON。
   List<MatchRecord> get matches {
+    final cached = _matches;
+    if (cached != null) return cached;
     final lines =
         _p.getStringList(AppConstants.prefKeyMatches) ?? const <String>[];
     final records = <MatchRecord>[];
@@ -93,7 +98,7 @@ class StorageService {
         if (record != null) records.add(record);
       } catch (_) {}
     }
-    return List.unmodifiable(records);
+    return _matches = List.unmodifiable(records);
   }
 
   /// 追加一局摘要，只保留最近 [AppConstants.maxStoredMatches] 局。
@@ -103,9 +108,13 @@ class StorageService {
     if (next.length > AppConstants.maxStoredMatches) {
       next.removeRange(AppConstants.maxStoredMatches, next.length);
     }
+    // 先失效缓存再写入：写入失败时下次读取也能拿到存储里的真实内容。
+    _matches = null;
     return p.setStringList(AppConstants.prefKeyMatches, next);
   });
 
-  Future<void> clearMatches() =>
-      _write((p) => p.remove(AppConstants.prefKeyMatches));
+  Future<void> clearMatches() => _write((p) {
+    _matches = null;
+    return p.remove(AppConstants.prefKeyMatches);
+  });
 }

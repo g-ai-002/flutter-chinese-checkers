@@ -161,6 +161,41 @@ void main() {
     expect(storage.matches.single.winner, 0);
   });
 
+  test('对局摘要解析结果被缓存，写入后失效', () async {
+    final storage = await StorageService.instance;
+    await storage.addMatch(record(0));
+
+    final cached = storage.matches;
+    expect(identical(storage.matches, cached), isTrue);
+
+    await storage.addMatch(record(1));
+    expect(identical(storage.matches, cached), isFalse);
+    expect(storage.matches.first.winner, 1);
+    expect(storage.matches, hasLength(2));
+
+    await storage.clearMatches();
+    expect(storage.matches, isEmpty);
+  });
+
+  test('生涯聚合缓存只随对局记录刷新', () async {
+    final storage = await StorageService.instance;
+    final settings = SettingsProvider(storage);
+
+    final empty = settings.matchSummary;
+    expect(empty.total, 0);
+
+    await settings.setDarkMode(true);
+    expect(identical(settings.matchSummary, empty), isTrue);
+
+    await settings.recordMatch(record(0));
+    expect(identical(settings.matchSummary, empty), isFalse);
+    expect(settings.matchSummary.total, 1);
+
+    await settings.clearMatches();
+    expect(settings.matchSummary.total, 0);
+    expect(settings.matches, isEmpty);
+  });
+
   test('记录对局会通知界面并刷新统计', () async {
     final storage = await StorageService.instance;
     final settings = SettingsProvider(storage);
