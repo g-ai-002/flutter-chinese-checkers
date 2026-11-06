@@ -195,6 +195,63 @@ void main() {
     expect(normal.lastSearch, isNull);
   });
 
+  test('六人局搜索限制为两步，节点数同样不超预算', () {
+    final setup = setupOf(Difficulty.hard, players: 6);
+    final board = CheckersBoard.initial(geometry, setup.seatArms);
+    final ai = CheckersAi(
+      geometry: geometry,
+      rules: rules,
+      setup: setup,
+      random: Random(11),
+    );
+
+    expect(ai.chooseMove(board, 3), isNotNull);
+    expect(ai.lastSearch, isNotNull);
+    expect(ai.lastSearch!.depth, 2);
+    expect(ai.lastSearch!.nodes, lessThanOrEqualTo(CheckersAi.nodeBudget));
+  });
+
+  test('预算耗尽时回退静态最优着法，仍返回合法着法', () {
+    final setup = setupOf(Difficulty.hard, players: 4);
+    final board = CheckersBoard.initial(geometry, setup.seatArms);
+    final ai = CheckersAi(
+      geometry: geometry,
+      rules: rules,
+      setup: setup,
+      random: Random(9),
+      maxNodes: 1,
+    );
+    final legal = rules.legalMoves(board, 0);
+
+    final move = ai.chooseMove(board, 0);
+
+    expect(move, isNotNull);
+    final chosen = move!;
+    expect(ai.lastSearch!.nodes, 1);
+    expect(
+      legal.any((item) => item.from == chosen.from && item.to == chosen.to),
+      isTrue,
+    );
+  });
+
+  test('对手进营越多，局面评分越低', () {
+    final setup = setupOf(Difficulty.hard);
+    final heuristics = AiHeuristics(geometry: geometry, setup: setup);
+    final target = geometry.armHoles[setup.targetArmOf(1)];
+    final outside = geometry.armHoles[3].take(4).toList();
+
+    CheckersBoard boardWith(int inTarget) =>
+        CheckersBoard.fromPieces(geometry, {
+          for (var i = 0; i < inTarget; i++) target[i]: 1,
+          for (var i = 0; i < 5 - inTarget; i++) outside[i]: 1,
+        });
+
+    final nearlyDone = heuristics.evaluate(boardWith(4), 0);
+    final justStarted = heuristics.evaluate(boardWith(1), 0);
+
+    expect(nearlyDone, lessThan(justStarted));
+  });
+
   test('高手对普通能正常收官，不会卡在 9/10', () {
     const setup = GameSetup(
       mode: PlayMode.local,

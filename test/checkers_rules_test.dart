@@ -156,4 +156,13 @@ void main() {
       }
     }
   });
+
+  test('座位轮转跳过无棋可走的玩家，全部无棋时返回 -1', () {
+    final board = boardWith({
+      [0, 0]: 0,
+    });
+    expect(rules.nextSeat(board, 0, 2), 0);
+    expect(rules.nextSeat(board, 1, 3), 0);
+    expect(rules.nextSeat(empty(), 0, 4), -1);
+  });
 }

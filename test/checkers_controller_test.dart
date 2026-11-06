@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:chinese_checkers/game/checkers_controller.dart';
 import 'package:chinese_checkers/game/checkers_rules.dart';
 import 'package:chinese_checkers/models/game_models.dart';
@@ -238,5 +240,31 @@ void main() {
     controller.tapHole(other);
 
     expect(controller.hintMove, isNull);
+  });
+
+  test('查看提示不会打乱电脑后续走子的随机序列', () async {
+    Future<int> aiReply({required bool withHint}) async {
+      final controller = CheckersController(
+        setup: const GameSetup(
+          mode: PlayMode.vsAi,
+          playerCount: PlayerCount.two,
+          difficulty: Difficulty.easy,
+        ),
+        random: Random(21),
+        aiDelay: Duration.zero,
+      );
+      controller.start();
+      final first = CheckersRules(controller.geometry)
+          .legalMoves(controller.board, 0)
+          .first;
+      if (withHint) controller.requestHint();
+      controller.applyMove(first);
+      await Future<void>.delayed(const Duration(milliseconds: 40));
+      final record = controller.history.last;
+      controller.dispose();
+      return Object.hash(record.seat, record.move.from, record.move.to);
+    }
+
+    expect(await aiReply(withHint: true), await aiReply(withHint: false));
   });
 }
