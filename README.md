@@ -28,13 +28,13 @@
 
 ## 下载
 
-v0.4.0（最新）：[Gitea Release](http://192.168.31.120:3020/GTech/flutter-chinese-checkers/releases/tag/v0.4.0)
+v0.4.1（最新）：[Gitea Release](http://192.168.31.120:3020/GTech/flutter-chinese-checkers/releases/tag/v0.4.1)
 
 | 平台 | 产物 |
 | --- | --- |
-| Android (arm64) | `flutter-chinese-checkers-0.4.0-android-aarch64.apk` |
-| Windows (x64, Win10+) | `flutter-chinese-checkers-0.4.0-windows-x86_64.zip` |
-| Web | `flutter-chinese-checkers-0.4.0-web.zip`（解压后起静态服务器） |
+| Android (arm64) | `flutter-chinese-checkers-0.4.1-android-aarch64.apk` |
+| Windows (x64, Win10+) | `flutter-chinese-checkers-0.4.1-windows-x86_64.zip` |
+| Web | `flutter-chinese-checkers-0.4.1-web.zip`（解压后起静态服务器） |
 
 ## 规则
 
@@ -79,8 +79,8 @@ lib/
 
 | 版本 | 说明 |
 | --- | --- |
+| v0.4.1 | 重构电脑棋力模块：估值单次分组、完整 alpha-beta 窗口、预算兜底与座位轮转共用 |
 | v0.4.0 | 提升电脑棋力：收官计划按营地深浅优先补尖端，高手改为三层搜索并会封堵对手进营 |
 | v0.3.2 | 重构统计链路：摘要惰性解析缓存、生涯聚合复用，统计与设置卡片收敛到统一容器 |
 | v0.3.1 | 修正最近对局超过八局时的计数，纯单步复盘不再显示最佳着法星标 |
 | v0.3.0 | 新增对局统计与复盘最佳着法：胜负胜率、入营效率、常用开局与最近对局 |
-| v0.2.1 | 重构复盘增量代码：增量跳转、控件拆分与棋谱浮层实时刷新 |
