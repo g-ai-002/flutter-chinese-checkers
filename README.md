@@ -7,6 +7,7 @@
 - ⭐ 经典六角星棋盘：121 个孔位，六个 10 孔营地，正对面营地即目标
 - 🎯 完整走子规则：单步走到相邻空孔，连跳可跨过任意一方棋子并连续多跳，中途可停
 - 🤖 人机对战：入门 / 普通 / 高手三档，电脑自动接管其余座位，可自由选择自己的座位
+- 🧠 高手棋力：三层搜索配合收官计划，优先补满营地尖端，会封堵对手一步进营
 - 👥 同屏对战：2 / 3 / 4 / 6 人轮流落子，适合面对面手谈
 - 💡 提示：一键给出推荐走法，金色折线标注完整连跳路径，6 秒后自动收起
 - ↩️ 悔棋与重开：人机模式一次回到自己上一次走棋之前
@@ -27,13 +28,13 @@
 
 ## 下载
 
-v0.3.2（最新）：[Gitea Release](http://192.168.31.120:3020/GTech/flutter-chinese-checkers/releases/tag/v0.3.2)
+v0.4.0（最新）：[Gitea Release](http://192.168.31.120:3020/GTech/flutter-chinese-checkers/releases/tag/v0.4.0)
 
 | 平台 | 产物 |
 | --- | --- |
-| Android (arm64) | `flutter-chinese-checkers-0.3.2-android-aarch64.apk` |
-| Windows (x64, Win10+) | `flutter-chinese-checkers-0.3.2-windows-x86_64.zip` |
-| Web | `flutter-chinese-checkers-0.3.2-web.zip`（解压后起静态服务器） |
+| Android (arm64) | `flutter-chinese-checkers-0.4.0-android-aarch64.apk` |
+| Windows (x64, Win10+) | `flutter-chinese-checkers-0.4.0-windows-x86_64.zip` |
+| Web | `flutter-chinese-checkers-0.4.0-web.zip`（解压后起静态服务器） |
 
 ## 规则
 
@@ -78,8 +79,8 @@ lib/
 
 | 版本 | 说明 |
 | --- | --- |
+| v0.4.0 | 提升电脑棋力：收官计划按营地深浅优先补尖端，高手改为三层搜索并会封堵对手进营 |
 | v0.3.2 | 重构统计链路：摘要惰性解析缓存、生涯聚合复用，统计与设置卡片收敛到统一容器 |
 | v0.3.1 | 修正最近对局超过八局时的计数，纯单步复盘不再显示最佳着法星标 |
 | v0.3.0 | 新增对局统计与复盘最佳着法：胜负胜率、入营效率、常用开局与最近对局 |
 | v0.2.1 | 重构复盘增量代码：增量跳转、控件拆分与棋谱浮层实时刷新 |
-| v0.2.0 | 新增对局复盘：逐手回看、进度跳转、自动播放与带进营标注的棋谱 |
