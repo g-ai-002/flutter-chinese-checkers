@@ -15,6 +15,7 @@ import 'replay_page.dart';
 import 'widgets/board_stage.dart';
 import 'widgets/game_dialogs.dart';
 import 'widgets/players_panel.dart';
+import 'widgets/surface_card.dart';
 
 class GamePage extends StatefulWidget {
   const GamePage({super.key, required this.setup});
@@ -298,18 +299,11 @@ class _Legend extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = theme.colorScheme;
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: colors.outline),
-      ),
+    return SurfaceCard(
+      title: '怎么看',
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('怎么看', style: theme.textTheme.titleSmall),
-          const SizedBox(height: 10),
           _LegendRow(
             marker: Container(
               width: 9,

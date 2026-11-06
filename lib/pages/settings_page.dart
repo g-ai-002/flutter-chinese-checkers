@@ -9,6 +9,7 @@ import '../services/log_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/constants.dart';
 import '../utils/platform_info.dart';
+import 'widgets/surface_card.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -279,24 +280,12 @@ class _Section extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Material(
-      color: theme.colorScheme.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: theme.colorScheme.outline),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, style: theme.textTheme.titleSmall),
-            const SizedBox(height: 8),
-            ...children,
-          ],
-        ),
+    return SurfaceCard(
+      title: title,
+      headerGap: 8,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: children,
       ),
     );
   }
