@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:chinese_checkers/game/ai_heuristics.dart';
 import 'package:chinese_checkers/game/board_geometry.dart';
 import 'package:chinese_checkers/game/checkers_ai.dart';
 import 'package:chinese_checkers/game/checkers_board.dart';
@@ -90,5 +91,144 @@ void main() {
     final move = ai.chooseMove(board, 0);
     expect(move, isNotNull);
     expect(move!.to, empty);
+  });
+
+  test('营地入口留空比只剩尖端更好', () {
+    // 入口先被占满会让最后的棋子再也进不来，对局就卡在 9/10。
+    final setup = setupOf(Difficulty.hard);
+    final heuristics = AiHeuristics(geometry: geometry, setup: setup);
+    final target = setup.targetArmOf(0);
+    final tip = geometry.tipHole(target);
+    final entrance = geometry.armHoles[target].reduce(
+      (a, b) =>
+          geometry.distance(a, geometry.holeAt(0, 0)!) <
+              geometry.distance(b, geometry.holeAt(0, 0)!)
+          ? a
+          : b,
+    );
+    final outside = geometry.holeAt(0, 0)!;
+
+    CheckersBoard campWithEmpty(int empty) =>
+        CheckersBoard.fromPieces(geometry, {
+          for (final hole in geometry.armHoles[target])
+            if (hole != empty) hole: 0,
+          outside: 0,
+        });
+
+    expect(
+      heuristics.evaluate(campWithEmpty(entrance), 0),
+      greaterThan(heuristics.evaluate(campWithEmpty(tip), 0)),
+    );
+  });
+
+  test('高手会先完成收官计划，不移动已进营的棋子', () {
+    final setup = setupOf(Difficulty.hard);
+    final ai = CheckersAi(
+      geometry: geometry,
+      rules: rules,
+      setup: setup,
+      random: Random(1),
+    );
+    final target = geometry.armHoles[setup.targetArmOf(0)];
+    final board = CheckersBoard.fromPieces(geometry, {
+      for (var i = 1; i < target.length; i++) target[i]: 0,
+      101: 0,
+    });
+    final distances = geometry.distancesToArm(setup.targetArmOf(0));
+
+    final move = ai.chooseMove(board, 0)!;
+    expect(target, isNot(contains(move.from)));
+    expect(move.from, 101);
+    expect(distances[move.to], lessThan(distances[101]));
+  });
+
+  test('高手会堵住对手一步收官的入口', () {
+    final setup = setupOf(Difficulty.hard);
+    final ai = CheckersAi(
+      geometry: geometry,
+      rules: rules,
+      setup: setup,
+      random: Random(1),
+    );
+    // 1 号座位占满 0 号营地的九格，18 号孔一步就能补上 9 号空位。
+    const slot = 9;
+    final board = CheckersBoard.fromPieces(geometry, {
+      for (final hole in geometry.armHoles[0])
+        if (hole != slot) hole: 1,
+      18: 1,
+      for (var i = 0; i < 8; i++) geometry.armHoles[3][i]: 0,
+      17: 0,
+      60: 0,
+    });
+
+    final threat = CheckersBoard(board.cells)..move(18, slot);
+    expect(rules.hasWon(threat, 1, 0), isTrue);
+
+    final move = ai.chooseMove(board, 0)!;
+    expect(move.from, 17);
+    expect(move.to, slot);
+  });
+
+  test('高手搜索受节点预算约束，普通难度不做搜索', () {
+    final setup = setupOf(Difficulty.hard, players: 4);
+    final board = CheckersBoard.initial(geometry, setup.seatArms);
+    final hard = CheckersAi(
+      geometry: geometry,
+      rules: rules,
+      setup: setup,
+      random: Random(5),
+    );
+    expect(hard.chooseMove(board, 0), isNotNull);
+    expect(hard.lastSearch, isNotNull);
+    expect(hard.lastSearch!.nodes, greaterThan(0));
+    expect(hard.lastSearch!.nodes, lessThanOrEqualTo(CheckersAi.nodeBudget));
+    expect(hard.lastSearch!.depth, 3);
+
+    final normalSetup = setupOf(Difficulty.normal, players: 4);
+    final normal = CheckersAi(
+      geometry: geometry,
+      rules: rules,
+      setup: normalSetup,
+      random: Random(5),
+    );
+    expect(normal.chooseMove(board, 0), isNotNull);
+    expect(normal.lastSearch, isNull);
+  });
+
+  test('高手对普通能正常收官，不会卡在 9/10', () {
+    const setup = GameSetup(
+      mode: PlayMode.local,
+      playerCount: PlayerCount.two,
+      difficulty: Difficulty.hard,
+    );
+    final ais = [
+      CheckersAi(
+        geometry: geometry,
+        rules: rules,
+        setup: setup,
+        difficulty: Difficulty.hard,
+        random: Random(2),
+      ),
+      CheckersAi(
+        geometry: geometry,
+        rules: rules,
+        setup: setup,
+        difficulty: Difficulty.normal,
+        random: Random(3),
+      ),
+    ];
+    final board = CheckersBoard.initial(geometry, setup.seatArms);
+    var seat = 0;
+    var plies = 0;
+    while (plies < 400) {
+      final move = ais[seat].chooseMove(board, seat);
+      if (move == null) break;
+      board.move(move.from, move.to);
+      plies++;
+      if (rules.hasWon(board, seat, setup.targetArmOf(seat))) break;
+      seat = 1 - seat;
+    }
+    expect(rules.hasWon(board, 0, 3), isTrue);
+    expect(plies, lessThan(300));
   });
 }

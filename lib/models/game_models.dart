@@ -12,7 +12,7 @@ enum PlayMode {
 enum Difficulty {
   easy('入门', '随机挑一步能走通的棋'),
   normal('普通', '优先向前推进，能连跳就连跳'),
-  hard('高手', '评估最佳落点，并预判对手一步');
+  hard('高手', '多步搜索配合收官计划，会主动封堵对手进营');
 
   const Difficulty(this.label, this.description);
 

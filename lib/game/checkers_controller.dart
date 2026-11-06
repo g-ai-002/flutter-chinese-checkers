@@ -245,6 +245,10 @@ class CheckersController extends ChangeNotifier implements BoardSource {
     Future<void>.delayed(aiDelay, () {
       if (_disposed || epoch != _epoch || isFinished) return;
       final move = _ai.chooseMove(board, currentSeat);
+      final search = _ai.lastSearch;
+      if (search != null) {
+        LogService.info('电脑搜索: 座位 ${currentSeat + 1}, $search');
+      }
       isAiThinking = false;
       if (move == null) {
         final advanced = _advanceTurn();
