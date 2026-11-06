@@ -14,6 +14,7 @@ import '../services/sound_service.dart';
 import '../utils/constants.dart';
 import 'replay_page.dart';
 import 'widgets/board_stage.dart';
+import 'widgets/confirm_dialog.dart';
 import 'widgets/game_dialogs.dart';
 import 'widgets/players_panel.dart';
 import 'widgets/surface_card.dart';
@@ -88,8 +89,12 @@ class _GamePageState extends State<GamePage> {
 
   void _openReplay() {
     if (_controller.history.isEmpty) return;
+    _openArchive(_archive());
+  }
+
+  void _openArchive(ReplayArchive archive) {
     Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => ReplayPage(archive: _archive())),
+      MaterialPageRoute<void>(builder: (_) => ReplayPage(archive: archive)),
     );
   }
 
@@ -122,7 +127,7 @@ class _GamePageState extends State<GamePage> {
       record: record,
       onReplay: () {
         Navigator.of(context).pop();
-        _openReplay();
+        _openArchive(archive);
       },
       onRestart: () {
         Navigator.of(context).pop();
@@ -142,24 +147,13 @@ class _GamePageState extends State<GamePage> {
       _seenMoves = 0;
       return;
     }
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('重新开始？'),
-        content: const Text('当前对局的走子记录会被清空。'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('重新开始'),
-          ),
-        ],
-      ),
+    final confirmed = await showConfirmDialog(
+      context,
+      title: '重新开始？',
+      message: '当前对局的走子记录会被清空。',
+      confirmLabel: '重新开始',
     );
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
     _controller.restart();
     _seenMoves = 0;
   }

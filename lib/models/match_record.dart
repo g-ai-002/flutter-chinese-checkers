@@ -65,10 +65,7 @@ class MatchRecord {
       playedAt:
           DateTime.tryParse(json['playedAt'] as String? ?? '') ??
           DateTime.now(),
-      mode: PlayMode.values.firstWhere(
-        (value) => value.name == json['mode'],
-        orElse: () => PlayMode.local,
-      ),
+      mode: PlayMode.tryByName(json['mode']) ?? PlayMode.local,
       playerCount: playerCount,
       difficulty: Difficulty.byName(json['difficulty'] as String?),
       humanSeat: humanSeat >= 0 && humanSeat < playerCount.count

@@ -35,14 +35,16 @@ class _ReplayExportDialog extends StatefulWidget {
 }
 
 class _ReplayExportDialogState extends State<_ReplayExportDialog> {
+  /// 分享码内容较长，只在打开浮层时编码一次，复制与保存复用同一份。
+  late final String _shareCode = widget.archive.encode();
   String? _savedPath;
   bool _saving = false;
 
   Future<void> _saveToFile() async {
     setState(() => _saving = true);
     final path = await FileSystemService.instance.saveExport(
-      exportFileName(widget.archive),
-      '${widget.archive.encode()}\n',
+      replayFileName(widget.archive.savedAt),
+      '$_shareCode\n',
     );
     if (!mounted) return;
     setState(() {
@@ -52,7 +54,7 @@ class _ReplayExportDialogState extends State<_ReplayExportDialog> {
   }
 
   Future<void> _copy() async {
-    await Clipboard.setData(ClipboardData(text: widget.archive.encode()));
+    await Clipboard.setData(ClipboardData(text: _shareCode));
     if (!mounted) return;
     ScaffoldMessenger.of(context)
         .showSnackBar(const SnackBar(content: Text('分享码已复制')));
@@ -85,7 +87,7 @@ class _ReplayExportDialogState extends State<_ReplayExportDialog> {
               ),
               child: SingleChildScrollView(
                 child: SelectableText(
-                  widget.archive.encode(),
+                  _shareCode,
                   style: const TextStyle(
                     fontFamily: 'monospace',
                     fontSize: 11,
@@ -217,11 +219,4 @@ class _ReplayImportDialogState extends State<_ReplayImportDialog> {
       ],
     );
   }
-}
-
-/// 导出文件名：`tiaoqi_20261107_011200.txt`。
-String exportFileName(ReplayArchive archive) {
-  final time = archive.savedAt;
-  return 'tiaoqi_${formatDateKey(time)}_'
-      '${pad2(time.hour)}${pad2(time.minute)}${pad2(time.second)}.txt';
 }

@@ -6,6 +6,7 @@ import '../providers/settings_provider.dart';
 import '../services/log_service.dart';
 import 'replay_page.dart';
 import 'widgets/archive_widgets.dart';
+import 'widgets/confirm_dialog.dart';
 import 'widgets/replay_exchange.dart';
 
 /// 棋谱库：浏览终局自动存档的棋谱，支持导入、导出与删除。
@@ -79,47 +80,25 @@ class ArchivePage extends StatelessWidget {
   }
 
   Future<void> _delete(BuildContext context, ReplayArchive archive) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('删除这份棋谱？'),
-        content: const Text('删除后无法恢复，分享出去的棋谱码仍可重新导入。'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('删除'),
-          ),
-        ],
-      ),
+    final confirmed = await showConfirmDialog(
+      context,
+      title: '删除这份棋谱？',
+      message: '删除后无法恢复，分享出去的棋谱码仍可重新导入。',
+      confirmLabel: '删除',
     );
-    if (confirmed != true || !context.mounted) return;
+    if (!confirmed || !context.mounted) return;
     await context.read<SettingsProvider>().removeReplay(archive.id);
     LogService.info('删除棋谱: ${archive.title}, ${archive.moves} 手');
   }
 
   Future<void> _clear(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('清空棋谱库？'),
-        content: const Text('所有存档棋谱都会被删除，且无法恢复。'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('清空'),
-          ),
-        ],
-      ),
+    final confirmed = await showConfirmDialog(
+      context,
+      title: '清空棋谱库？',
+      message: '所有存档棋谱都会被删除，且无法恢复。',
+      confirmLabel: '清空',
     );
-    if (confirmed != true || !context.mounted) return;
+    if (!confirmed || !context.mounted) return;
     await context.read<SettingsProvider>().clearReplays();
     LogService.info('清空棋谱库');
   }

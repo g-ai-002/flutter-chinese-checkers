@@ -12,7 +12,7 @@ class StorageService {
   static StorageService? _instance;
   SharedPreferences? _prefs;
   List<MatchRecord>? _matches;
-  List<ReplayArchive>? _replays;
+  _ReplayCache? _replays;
 
   StorageService._();
 
@@ -104,15 +104,17 @@ class StorageService {
   }
 
   /// 追加一局摘要，只保留最近 [AppConstants.maxStoredMatches] 局。
-  Future<void> addMatch(MatchRecord record) => _write((p) async {
+  Future<void> addMatch(MatchRecord record) => _write((p) {
     final lines = p.getStringList(AppConstants.prefKeyMatches) ?? <String>[];
-    final next = <String>[jsonEncode(record.toJson()), ...lines];
-    if (next.length > AppConstants.maxStoredMatches) {
-      next.removeRange(AppConstants.maxStoredMatches, next.length);
-    }
     // 先失效缓存再写入：写入失败时下次读取也能拿到存储里的真实内容。
     _matches = null;
-    return p.setStringList(AppConstants.prefKeyMatches, next);
+    return p.setStringList(
+      AppConstants.prefKeyMatches,
+      _trimmed([
+        jsonEncode(record.toJson()),
+        ...lines,
+      ], AppConstants.maxStoredMatches),
+    );
   });
 
   Future<void> clearMatches() => _write((p) {
@@ -122,47 +124,70 @@ class StorageService {
 
   /// 棋谱库，按保存时间倒序；损坏的棋谱会被跳过。
   ///
-  /// 本地存档已在写入前校验过，读取时只做结构解析，避免启动时重放整局。
-  List<ReplayArchive> get replays {
+  /// 原始文本与解析结果一起缓存：界面重建、增删棋谱都不必重新解码整库，
+  /// 未改动的棋谱也能保持写入时的原始文本。
+  List<ReplayArchive> get replays => _replayCache.archives;
+
+  _ReplayCache get _replayCache {
     final cached = _replays;
     if (cached != null) return cached;
-    final lines =
-        _p.getStringList(AppConstants.prefKeyReplays) ?? const <String>[];
+    final stored = _p.getStringList(AppConstants.prefKeyReplays) ?? const [];
+    final lines = <String>[];
     final archives = <ReplayArchive>[];
-    for (final line in lines) {
+    for (final line in stored) {
       final archive = ReplayArchive.decode(line, verifyMoves: false);
-      if (archive != null) archives.add(archive);
+      if (archive == null) continue;
+      lines.add(line);
+      archives.add(archive);
     }
-    return _replays = List.unmodifiable(archives);
+    return _replays = _ReplayCache(lines: lines, archives: archives);
   }
 
   /// 追加一份棋谱，只保留最近 [AppConstants.maxStoredReplays] 局。
-  Future<void> addReplay(ReplayArchive archive) => _write((p) async {
-    final lines = p.getStringList(AppConstants.prefKeyReplays) ?? <String>[];
-    final next = <String>[
-      archive.encode(),
-      for (final line in lines)
-        if (ReplayArchive.decode(line, verifyMoves: false)?.id != archive.id)
-          line,
-    ];
-    if (next.length > AppConstants.maxStoredReplays) {
-      next.removeRange(AppConstants.maxStoredReplays, next.length);
+  Future<void> addReplay(ReplayArchive archive) => _write((p) {
+    final cached = _replayCache;
+    final lines = <String>[archive.encode()];
+    for (var i = 0; i < cached.archives.length; i++) {
+      if (cached.archives[i].id != archive.id) lines.add(cached.lines[i]);
     }
-    _replays = null;
-    return p.setStringList(AppConstants.prefKeyReplays, next);
+    return _commitReplays(p, lines);
   });
 
   Future<void> removeReplay(String id) => _write((p) {
-    final next = [
-      for (final archive in replays)
-        if (archive.id != id) archive.encode(),
+    final cached = _replayCache;
+    final lines = <String>[
+      for (var i = 0; i < cached.archives.length; i++)
+        if (cached.archives[i].id != id) cached.lines[i],
     ];
-    _replays = null;
-    return p.setStringList(AppConstants.prefKeyReplays, next);
+    return _commitReplays(p, lines);
   });
 
   Future<void> clearReplays() => _write((p) {
     _replays = null;
     return p.remove(AppConstants.prefKeyReplays);
   });
+
+  Future<bool> _commitReplays(SharedPreferences p, List<String> lines) {
+    _replays = null;
+    return p.setStringList(
+      AppConstants.prefKeyReplays,
+      _trimmed(lines, AppConstants.maxStoredReplays),
+    );
+  }
+
+  /// 按上限截断，超出部分从尾部丢弃（列表头部是最新的记录）。
+  static List<String> _trimmed(Iterable<String> lines, int limit) =>
+      lines.take(limit).toList(growable: false);
+}
+
+/// 棋谱库的读取缓存：原始文本与解析结果一一对应，增删时按同一下标过滤。
+class _ReplayCache {
+  _ReplayCache({
+    required List<String> lines,
+    required List<ReplayArchive> archives,
+  }) : lines = List.unmodifiable(lines),
+       archives = List.unmodifiable(archives);
+
+  final List<String> lines;
+  final List<ReplayArchive> archives;
 }

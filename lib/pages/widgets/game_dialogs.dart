@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/match_record.dart';
 import '../../theme/player_palette.dart';
 import '../../utils/formatters.dart';
+import 'confirm_dialog.dart';
 
 /// 终局弹窗：显示胜者、步数、用时与本局亮点。
 Future<void> showGameResultDialog(
@@ -113,25 +114,14 @@ class _StatRow extends StatelessWidget {
 }
 
 /// 离开对局前的确认。
-Future<bool> confirmLeaveGame(BuildContext context) async {
-  final result = await showDialog<bool>(
-    context: context,
-    builder: (dialogContext) => AlertDialog(
-      title: const Text('退出对局？'),
-      content: const Text('当前进度不会保存，返回首页后需要重新开始。'),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(dialogContext).pop(false),
-          child: const Text('继续对局'),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.of(dialogContext).pop(true),
-          child: const Text('退出'),
-        ),
-      ],
-    ),
+Future<bool> confirmLeaveGame(BuildContext context) {
+  return showConfirmDialog(
+    context,
+    title: '退出对局？',
+    message: '当前进度不会保存，返回首页后需要重新开始。',
+    confirmLabel: '退出',
+    cancelLabel: '继续对局',
   );
-  return result ?? false;
 }
 
 /// 玩法说明，首页与对局页共用一个弹窗。

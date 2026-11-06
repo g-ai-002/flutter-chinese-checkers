@@ -25,3 +25,8 @@ String formatDuration(Duration duration) {
 /// `MM-dd HH:mm`，统计页的紧凑时间。
 String formatShortDateTime(DateTime time) =>
     '${pad2(time.month)}-${pad2(time.day)} ${pad2(time.hour)}:${pad2(time.minute)}';
+
+/// 棋谱导出文件名：`tiaoqi_20261107_011200.txt`。
+String replayFileName(DateTime savedAt) =>
+    'tiaoqi_${formatDateKey(savedAt)}_'
+    '${pad2(savedAt.hour)}${pad2(savedAt.minute)}${pad2(savedAt.second)}.txt';

@@ -126,4 +126,47 @@ void main() {
     expect(decoded, isNotNull);
     expect(decoded!.moves, 6);
   });
+
+  test('六人棋谱的人数、座位与难度可原样还原', () {
+    const setup = GameSetup(
+      mode: PlayMode.local,
+      playerCount: PlayerCount.six,
+      humanSeat: 4,
+    );
+    final archive = sampleArchive(setup: setup, count: 12);
+
+    final decoded = ReplayArchive.decode(archive.encode())!;
+
+    expect(decoded.setup.playerCount, PlayerCount.six);
+    expect(decoded.setup.humanSeat, 4);
+    expect(decoded.setup.mode, PlayMode.local);
+    expect(decoded.moves, 12);
+  });
+
+  test('导入时拒绝非数字胜者、非法模式与非法用时', () {
+    final json = tampered(sampleArchive());
+
+    expect(ReplayArchive.decode(jsonEncode({...json, 'winner': 'a'})), isNull);
+    expect(
+      ReplayArchive.decode(jsonEncode({...json, 'mode': 'unknown'})),
+      isNull,
+    );
+    expect(
+      ReplayArchive.decode(jsonEncode({...json, 'playerCount': 'two'})),
+      isNull,
+    );
+    expect(
+      ReplayArchive.decode(jsonEncode({...json, 'durationMs': -1})),
+      isNull,
+    );
+  });
+
+  test('缺少座位字段时回落到 0 号座位', () {
+    final archive = sampleArchive();
+    final json = tampered(archive)..remove('humanSeat');
+
+    final decoded = ReplayArchive.decode(jsonEncode(json))!;
+
+    expect(decoded.setup.humanSeat, 0);
+  });
 }

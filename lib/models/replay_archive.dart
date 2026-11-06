@@ -114,43 +114,23 @@ class ReplayArchive {
     final version = (json['version'] as num?)?.toInt();
     if (version == null || version < 1 || version > formatVersion) return null;
 
-    final playerCount = _playerCountOf((json['playerCount'] as num?)?.toInt());
-    final mode = _modeOf(json['mode']);
-    if (playerCount == null || mode == null) return null;
-
-    final humanSeat = (json['humanSeat'] as num?)?.toInt() ?? 0;
-    if (humanSeat < 0 || humanSeat >= playerCount.count) return null;
-
-    int? winner;
-    if (json['winner'] != null) {
-      final seat = (json['winner'] as num?)?.toInt();
-      if (seat == null || seat < 0 || seat >= playerCount.count) return null;
-      winner = seat;
-    }
+    final setup = _setupOf(json);
+    if (setup == null) return null;
 
     final durationMs = (json['durationMs'] as num?)?.toInt();
     if (durationMs == null || durationMs < 0) return null;
 
-    final rawMoves = json['moves'];
-    if (rawMoves is! List || rawMoves.isEmpty) return null;
-    final holes = BoardGeometry.star().length;
-    final records = <MoveRecord>[];
-    for (final item in rawMoves) {
-      final record = _moveOf(item, holes);
-      if (record == null || record.seat >= playerCount.count) return null;
-      records.add(record);
-    }
+    final records = _recordsOf(json['moves'], setup.players);
+    if (records == null) return null;
+
+    final winner = _winnerOf(json['winner'], setup.playerCount);
+    // null 既可能是平局，也可能是越界座位，用原始字段区分两种情况。
+    if (json['winner'] != null && winner == null) return null;
+
+    if (verifyMoves && !_isLegalSequence(setup, records, winner)) return null;
 
     final savedAt =
         DateTime.tryParse(json['savedAt'] as String? ?? '') ?? DateTime.now();
-    final setup = GameSetup(
-      mode: mode,
-      playerCount: playerCount,
-      difficulty: Difficulty.byName(json['difficulty'] as String?),
-      humanSeat: humanSeat,
-    );
-    if (verifyMoves && !_isLegalSequence(setup, records, winner)) return null;
-
     final id = json['id'];
     return ReplayArchive(
       id: id is String && id.isNotEmpty
@@ -162,6 +142,44 @@ class ReplayArchive {
       duration: Duration(milliseconds: durationMs),
       records: records,
     );
+  }
+
+  /// 对局设置：人数、模式、难度与人类座位都必须落在合法范围内。
+  static GameSetup? _setupOf(Map<String, dynamic> json) {
+    final playerCount = PlayerCount.tryByCount(
+      (json['playerCount'] as num?)?.toInt(),
+    );
+    final mode = PlayMode.tryByName(json['mode']);
+    if (playerCount == null || mode == null) return null;
+    final humanSeat = (json['humanSeat'] as num?)?.toInt() ?? 0;
+    if (humanSeat < 0 || humanSeat >= playerCount.count) return null;
+    return GameSetup(
+      mode: mode,
+      playerCount: playerCount,
+      difficulty: Difficulty.byName(json['difficulty'] as String?),
+      humanSeat: humanSeat,
+    );
+  }
+
+  /// 胜者座位，越界或非整数返回 null；`winner` 为 null 表示平局。
+  static int? _winnerOf(Object? raw, PlayerCount playerCount) {
+    if (raw is! num) return null;
+    final seat = raw.toInt();
+    if (seat < 0 || seat >= playerCount.count) return null;
+    return seat;
+  }
+
+  /// 逐手记录：孔位越界、路径重复或非跳子多步一律拒绝。
+  static List<MoveRecord>? _recordsOf(Object? rawMoves, int players) {
+    if (rawMoves is! List || rawMoves.isEmpty) return null;
+    final holes = BoardGeometry.star().length;
+    final records = <MoveRecord>[];
+    for (final item in rawMoves) {
+      final record = _moveOf(item, holes);
+      if (record == null || record.seat >= players) return null;
+      records.add(record);
+    }
+    return records;
   }
 
   static MoveRecord? _moveOf(Object? item, int holes) {
@@ -216,19 +234,5 @@ class ReplayArchive {
       return false;
     }
     return true;
-  }
-
-  static PlayerCount? _playerCountOf(int? count) {
-    for (final value in PlayerCount.values) {
-      if (value.count == count) return value;
-    }
-    return null;
-  }
-
-  static PlayMode? _modeOf(Object? name) {
-    for (final value in PlayMode.values) {
-      if (value.name == name) return value;
-    }
-    return null;
   }
 }

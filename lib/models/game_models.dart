@@ -6,6 +6,14 @@ enum PlayMode {
   const PlayMode(this.label);
 
   final String label;
+
+  /// 严格按名称查找，未知名称返回 null（用于校验外部数据）。
+  static PlayMode? tryByName(Object? name) {
+    for (final value in values) {
+      if (value.name == name) return value;
+    }
+    return null;
+  }
 }
 
 /// 电脑难度。
@@ -42,11 +50,15 @@ enum PlayerCount {
   /// 每个座位对应的营地（棋盘六个角之一），两两相对时对局最公平。
   final List<int> seatArms;
 
-  static PlayerCount byCount(int? count) {
+  static PlayerCount byCount(int? count) =>
+      tryByCount(count) ?? PlayerCount.two;
+
+  /// 严格按人数查找，未知人数返回 null（用于校验外部数据）。
+  static PlayerCount? tryByCount(int? count) {
     for (final value in values) {
       if (value.count == count) return value;
     }
-    return PlayerCount.two;
+    return null;
   }
 }
 

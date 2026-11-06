@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:chinese_checkers/models/replay_archive.dart';
 import 'package:chinese_checkers/providers/settings_provider.dart';
 import 'package:chinese_checkers/services/storage_service.dart';
@@ -6,6 +8,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/replay_fixtures.dart';
+
+/// 早期存档可能缺少 savedAt / id 字段，重新序列化会补上当前时间。
+String legacyLine(ReplayArchive archive) {
+  final payload = archive.encode().substring(ReplayArchive.codePrefix.length);
+  final json = jsonDecode(payload) as Map<String, dynamic>;
+  json
+    ..remove('savedAt')
+    ..remove('id');
+  return jsonEncode(json);
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -104,5 +116,46 @@ void main() {
     await storage.addReplay(ReplayArchive.decode(archive.encode())!);
 
     expect(storage.replays, hasLength(1));
+  });
+
+  test('新增棋谱保留已有存档的原始文本', () async {
+    final legacy = legacyLine(sampleArchive(savedAt: DateTime(2026, 1, 1, 9)));
+    SharedPreferences.setMockInitialValues({
+      AppConstants.prefKeyReplays: [legacy],
+    });
+    StorageService.resetForTests();
+
+    final storage = await StorageService.instance;
+    final newer = sampleArchive(savedAt: DateTime(2026, 1, 2, 9));
+    await storage.addReplay(newer);
+
+    final prefs = await SharedPreferences.getInstance();
+    final stored = prefs.getStringList(AppConstants.prefKeyReplays)!;
+    expect(stored, [newer.encode(), legacy]);
+  });
+
+  test('删除棋谱时保留其余存档的原始文本', () async {
+    final legacy = legacyLine(sampleArchive(savedAt: DateTime(2026, 1, 1, 9)));
+    final newer = sampleArchive(savedAt: DateTime(2026, 1, 2, 9));
+    SharedPreferences.setMockInitialValues({
+      AppConstants.prefKeyReplays: [newer.encode(), legacy],
+    });
+    StorageService.resetForTests();
+
+    final storage = await StorageService.instance;
+    expect(storage.replays, hasLength(2));
+
+    await storage.removeReplay(newer.id);
+
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getStringList(AppConstants.prefKeyReplays), [legacy]);
+    expect(storage.replays.single.id, isNot(newer.id));
+  });
+
+  test('棋谱列表只读，避免绕过存储直接改动缓存', () async {
+    final storage = await StorageService.instance;
+    await storage.addReplay(sampleArchive());
+
+    expect(() => storage.replays.add(sampleArchive()), throwsUnsupportedError);
   });
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/settings_provider.dart';
+import 'widgets/confirm_dialog.dart';
 import 'widgets/stats_widgets.dart';
 
 /// 对局统计：生涯概览、人机战绩、亮点与最近对局。
@@ -55,24 +56,13 @@ class StatsPage extends StatelessWidget {
     BuildContext context,
     SettingsProvider settings,
   ) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('清空对局统计？'),
-        content: const Text('所有历史对局摘要都会被删除，且无法恢复。'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('清空'),
-          ),
-        ],
-      ),
+    final confirmed = await showConfirmDialog(
+      context,
+      title: '清空对局统计？',
+      message: '所有历史对局摘要都会被删除，且无法恢复。',
+      confirmLabel: '清空',
     );
-    if (confirmed != true) return;
+    if (!confirmed) return;
     await settings.clearMatches();
   }
 }
