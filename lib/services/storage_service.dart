@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/game_models.dart';
 import '../models/match_record.dart';
+import '../models/replay_archive.dart';
 import '../utils/constants.dart';
 
 /// 轻量偏好存储：写入失败时静默忽略，不影响对局主流程。
@@ -11,6 +12,7 @@ class StorageService {
   static StorageService? _instance;
   SharedPreferences? _prefs;
   List<MatchRecord>? _matches;
+  List<ReplayArchive>? _replays;
 
   StorageService._();
 
@@ -116,5 +118,51 @@ class StorageService {
   Future<void> clearMatches() => _write((p) {
     _matches = null;
     return p.remove(AppConstants.prefKeyMatches);
+  });
+
+  /// 棋谱库，按保存时间倒序；损坏的棋谱会被跳过。
+  ///
+  /// 本地存档已在写入前校验过，读取时只做结构解析，避免启动时重放整局。
+  List<ReplayArchive> get replays {
+    final cached = _replays;
+    if (cached != null) return cached;
+    final lines =
+        _p.getStringList(AppConstants.prefKeyReplays) ?? const <String>[];
+    final archives = <ReplayArchive>[];
+    for (final line in lines) {
+      final archive = ReplayArchive.decode(line, verifyMoves: false);
+      if (archive != null) archives.add(archive);
+    }
+    return _replays = List.unmodifiable(archives);
+  }
+
+  /// 追加一份棋谱，只保留最近 [AppConstants.maxStoredReplays] 局。
+  Future<void> addReplay(ReplayArchive archive) => _write((p) async {
+    final lines = p.getStringList(AppConstants.prefKeyReplays) ?? <String>[];
+    final next = <String>[
+      archive.encode(),
+      for (final line in lines)
+        if (ReplayArchive.decode(line, verifyMoves: false)?.id != archive.id)
+          line,
+    ];
+    if (next.length > AppConstants.maxStoredReplays) {
+      next.removeRange(AppConstants.maxStoredReplays, next.length);
+    }
+    _replays = null;
+    return p.setStringList(AppConstants.prefKeyReplays, next);
+  });
+
+  Future<void> removeReplay(String id) => _write((p) {
+    final next = [
+      for (final archive in replays)
+        if (archive.id != id) archive.encode(),
+    ];
+    _replays = null;
+    return p.setStringList(AppConstants.prefKeyReplays, next);
+  });
+
+  Future<void> clearReplays() => _write((p) {
+    _replays = null;
+    return p.remove(AppConstants.prefKeyReplays);
   });
 }

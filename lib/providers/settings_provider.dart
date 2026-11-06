@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../models/game_models.dart';
 import '../models/match_record.dart';
 import '../models/match_summary.dart';
+import '../models/replay_archive.dart';
 import '../services/music_service.dart';
 import '../services/sound_service.dart';
 import '../services/storage_service.dart';
@@ -78,6 +79,23 @@ class SettingsProvider extends ChangeNotifier {
   Future<void> clearMatches() async {
     await _storage.clearMatches();
     _summary = null;
+    notifyListeners();
+  }
+
+  List<ReplayArchive> get replays => _storage.replays;
+
+  Future<void> saveReplay(ReplayArchive archive) async {
+    await _storage.addReplay(archive);
+    notifyListeners();
+  }
+
+  Future<void> removeReplay(String id) async {
+    await _storage.removeReplay(id);
+    notifyListeners();
+  }
+
+  Future<void> clearReplays() async {
+    await _storage.clearReplays();
     notifyListeners();
   }
 

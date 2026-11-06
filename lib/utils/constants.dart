@@ -29,7 +29,11 @@ class AppConstants {
   static const String prefKeyDifficulty = 'difficulty';
   static const String prefKeyHumanSeat = 'human_seat';
   static const String prefKeyMatches = 'match_history';
+  static const String prefKeyReplays = 'replay_archive';
 
   /// 偏好存储里保留的对局摘要上限，避免历史无限增长。
   static const int maxStoredMatches = 60;
+
+  /// 棋谱库保留的完整棋谱上限，避免偏好存储随对局数量膨胀。
+  static const int maxStoredReplays = 20;
 }

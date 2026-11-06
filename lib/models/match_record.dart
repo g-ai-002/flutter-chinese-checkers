@@ -132,12 +132,7 @@ class MatchRecord {
   double? get entryEfficiency => winnerMoves <= 0 ? null : winnerMoves / 10;
 
   /// 结果短标签：人机局为「胜 / 负 / 平局」，同屏局带上获胜玩家。
-  String get outcomeLabel {
-    final winner = this.winner;
-    if (winner == null) return '平局';
-    if (isAiGame) return winner == humanSeat ? '胜' : '负';
-    return '${setup.seatLabel(winner)}胜';
-  }
+  String get outcomeLabel => setup.outcomeLabelFor(winner);
 
   Map<String, dynamic> toJson() => {
     'playedAt': playedAt.toIso8601String(),

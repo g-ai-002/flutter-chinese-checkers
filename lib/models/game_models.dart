@@ -85,3 +85,12 @@ class GameSetup {
     return suffix;
   }
 }
+
+/// 对局结果的短标签：人机局为「胜 / 负 / 平局」，同屏局带上获胜玩家。
+extension GameOutcomeLabel on GameSetup {
+  String outcomeLabelFor(int? winner) {
+    if (winner == null) return '平局';
+    if (mode == PlayMode.vsAi) return winner == humanSeat ? '胜' : '负';
+    return '${seatLabel(winner)}胜';
+  }
+}
