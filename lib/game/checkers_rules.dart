@@ -86,6 +86,17 @@ class CheckersRules {
     return result;
   }
 
+  /// 从 [from] 之后开始，找到下一个仍有合法着法的座位。
+  ///
+  /// 全部座位都无棋可走时返回 -1；包含 [from] 自己，方便跳过已无子可动的座位。
+  int nextSeat(CheckersBoard board, int from, int players) {
+    for (var step = 1; step <= players; step++) {
+      final seat = (from + step) % players;
+      if (legalMoves(board, seat).isNotEmpty) return seat;
+    }
+    return -1;
+  }
+
   /// 全部棋子都进入对面营地即获胜。
   bool hasWon(CheckersBoard board, int seat, int targetArm) {
     for (final hole in geometry.armHoles[targetArm]) {

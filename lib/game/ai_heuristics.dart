@@ -16,8 +16,27 @@ class AiHeuristics {
   /// 已经全部进营的胜势分，任何正常局面的估值都不会接近它。
   static const double winScore = 100000;
 
-  /// 单个棋子进营后的固定分，远高于普通推进。
-  static const double _inTarget = 46;
+  /// 棋盘上距离目标营地最远的格数，用来把距离换算成「还差多远」。
+  static const int _farDistance = 14;
+
+  /// 自己的棋子已经贴着目标营地（差 3 格以内）时的额外奖励。
+  static const int _nearTargetDistance = 11;
+  static const double _nearTargetBonus = 6;
+
+  static const double _ownInTarget = 46;
+  static const double _ownAdvance = 2.4;
+  static const double _ownHomePenalty = 14;
+
+  static const double _opponentInTarget = 5.4;
+  static const double _opponentAdvance = 1.35;
+  static const double _opponentFillPressure = 60;
+
+  /// 预估把棋子填进空位的代价：每格距离的分值，以及营地深浅的基数。
+  static const double _fillBase = 5;
+  static const double _fillPerStep = 1.2;
+
+  /// 计算最近棋子时使用的哨兵值，六角星棋盘上任意两点都远小于它。
+  static const int _noPieceDistance = 99;
 
   final BoardGeometry geometry;
   final GameSetup setup;
@@ -32,57 +51,88 @@ class AiHeuristics {
   int armOf(int hole) => _arms[hole];
 
   double evaluate(CheckersBoard board, int seat) {
+    final pieces = _piecesBySeat(board);
     final target = _targets[seat];
+    var score = _ownScore(pieces[seat], board, seat, target);
+
+    for (var other = 0; other < setup.players; other++) {
+      if (other == seat) continue;
+      score += _opponentScore(pieces[other], board, other, _targets[other]);
+    }
+    return score;
+  }
+
+  /// 一次遍历把棋子按座位分组，避免每位对手都重扫整块棋盘。
+  List<List<int>> _piecesBySeat(CheckersBoard board) {
+    final pieces = List.generate(setup.players, (_) => <int>[]);
+    for (var hole = 0; hole < board.length; hole++) {
+      final owner = board.at(hole);
+      if (owner >= 0 && owner < setup.players) pieces[owner].add(hole);
+    }
+    return pieces;
+  }
+
+  double _ownScore(
+    List<int> pieces,
+    CheckersBoard board,
+    int seat,
+    int target,
+  ) {
     final distances = _distances(target);
     var score = 0.0;
     final outside = <int>[];
 
-    for (var hole = 0; hole < board.length; hole++) {
-      if (board.at(hole) != seat) continue;
+    for (final hole in pieces) {
       if (_arms[hole] == target) {
-        score += _inTarget;
+        score += _ownInTarget;
         continue;
       }
       outside.add(hole);
-      final near = 14 - distances[hole];
-      score += near * 2.4;
-      if (_arms[hole] == _homes[seat]) score -= 14;
+      final near = _farDistance - distances[hole];
+      score += near * _ownAdvance;
       // 已经贴着营地，再在营外兜圈就浪费了临门机会。
-      if (near >= 11) score += 6;
+      if (_arms[hole] == _homes[seat]) score -= _ownHomePenalty;
+      if (near >= _nearTargetDistance) score += _nearTargetBonus;
     }
 
-    final slots = _slotsFor(board, target, seat);
+    final slots = _openSlots(board, target, seat);
     if (slots.isNotEmpty && outside.isNotEmpty) {
       score -= _fillCost(outside, slots, ordered: true);
     }
+    return score;
+  }
 
-    for (var other = 0; other < setup.players; other++) {
-      if (other == seat) continue;
-      final otherTarget = _targets[other];
-      final otherDistances = _distances(otherTarget);
-      var held = 0;
-      final otherOutside = <int>[];
-      for (var hole = 0; hole < board.length; hole++) {
-        if (board.at(hole) != other) continue;
-        if (_arms[hole] == otherTarget) {
-          held++;
-        } else {
-          otherOutside.add(hole);
-          score -= (14 - otherDistances[hole]) * 1.35;
-        }
+  double _opponentScore(
+    List<int> pieces,
+    CheckersBoard board,
+    int other,
+    int target,
+  ) {
+    final distances = _distances(target);
+    var score = 0.0;
+    var held = 0;
+    final outside = <int>[];
+
+    for (final hole in pieces) {
+      if (_arms[hole] == target) {
+        held++;
+        continue;
       }
-      score -= held * 5.4;
-      final openSlots = _slotsFor(board, otherTarget, other);
-      if (openSlots.isNotEmpty && otherOutside.isNotEmpty) {
-        // 填满目标营地所需距离越短，对手越接近收官。
-        score -= 60 / (1 + _fillCost(otherOutside, openSlots));
-      }
+      outside.add(hole);
+      score -= (_farDistance - distances[hole]) * _opponentAdvance;
+    }
+    score -= held * _opponentInTarget;
+
+    final slots = _openSlots(board, target, other);
+    if (slots.isNotEmpty && outside.isNotEmpty) {
+      // 填满目标营地所需距离越短，对手越接近收官。
+      score -= _opponentFillPressure / (1 + _fillCost(outside, slots));
     }
     return score;
   }
 
   /// 目标营地中尚未被 [seat] 占据的孔位。
-  List<int> _slotsFor(CheckersBoard board, int arm, int seat) => [
+  List<int> _openSlots(CheckersBoard board, int arm, int seat) => [
     for (final hole in geometry.armHoles[arm])
       if (board.at(hole) != seat) hole,
   ];
@@ -97,13 +147,13 @@ class AiHeuristics {
   double _fillCost(List<int> pieces, List<int> slots, {bool ordered = false}) {
     var total = 0.0;
     for (final slot in slots) {
-      var nearest = 99;
+      var nearest = _noPieceDistance;
       for (final piece in pieces) {
         final d = geometry.distance(piece, slot);
         if (d < nearest) nearest = d;
       }
       total += ordered
-          ? _slotWeights[slot] * (5.0 + nearest * 1.2)
+          ? _slotWeights[slot] * (_fillBase + nearest * _fillPerStep)
           : nearest.toDouble();
     }
     return total;
@@ -117,7 +167,7 @@ class AiHeuristics {
     final weights = List<int>.filled(geometry.length, 0);
     final origin = geometry.holeAt(0, 0)!;
     for (final holes in geometry.armHoles) {
-      var min = 99;
+      var min = _noPieceDistance;
       for (final hole in holes) {
         final d = geometry.distance(hole, origin);
         if (d < min) min = d;

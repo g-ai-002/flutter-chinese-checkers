@@ -18,6 +18,7 @@ class CheckersAi {
     required this.setup,
     Difficulty? difficulty,
     Random? random,
+    this.maxNodes = nodeBudget,
   }) : difficulty = difficulty ?? setup.difficulty,
        _random = random ?? Random() {
     _heuristics = AiHeuristics(geometry: geometry, setup: setup);
@@ -30,14 +31,21 @@ class CheckersAi {
   static const int replyBranch = 7;
   static const int followBranch = 4;
 
-  /// 高手难度每步搜索的节点上限，保证界面上不会长时间卡顿。
+  /// 高手难度默认的每步搜索节点上限，保证界面上不会长时间卡顿。
   static const int nodeBudget = 900;
+
+  /// 对手营地只差这么多格（含）就填满时，视为一步收官的威胁。
+  static const int _criticalGap = 2;
 
   final BoardGeometry geometry;
   final CheckersRules rules;
   final GameSetup setup;
   final Difficulty difficulty;
   final Random _random;
+
+  /// 单步搜索允许展开的节点数，测试可以调小以覆盖预算耗尽的分支。
+  final int maxNodes;
+
   late final AiHeuristics _heuristics;
 
   /// 最近一次搜索的统计信息，界面与日志用它在出错时定位棋力开销。
@@ -48,32 +56,51 @@ class CheckersAi {
     final moves = rules.legalMoves(board, seat);
     if (moves.isEmpty) return null;
     // 能一步收官就先收官，任何难度都不会错过。
-    final targetArm = _heuristics.targetOf(seat);
-    for (final move in moves) {
-      if (_heuristics.armOf(move.to) != targetArm) continue;
-      final after = board.copy()..move(move.from, move.to);
-      if (rules.hasWon(after, seat, targetArm)) return move;
-    }
+    final winning = _winningMove(board, seat, moves);
+    if (winning != null) return winning;
+
     moves.shuffle(_random);
     if (difficulty == Difficulty.easy) return moves.first;
 
-    final ranked = _rank(board, moves, seat);
-    if (difficulty == Difficulty.normal) return ranked.first.move;
-    return _search(board, seat, ranked);
+    final rated = _rate(board, moves, seat);
+    if (difficulty == Difficulty.normal) return rated.first.move;
+    return _search(board, seat, rated);
+  }
+
+  /// 一步进营即可获胜的着法；没有则返回 null。
+  CheckersMove? _winningMove(
+    CheckersBoard board,
+    int seat,
+    List<CheckersMove> moves,
+  ) {
+    final target = _heuristics.targetOf(seat);
+    for (final move in moves) {
+      if (_heuristics.armOf(move.to) != target) continue;
+      final after = board.copy()..move(move.from, move.to);
+      if (rules.hasWon(after, seat, target)) return move;
+    }
+    return null;
   }
 
   /// 高手难度：候选着法 × 对手最佳回应 × 自己的后续，取最坏情况下的最优。
-  CheckersMove _search(CheckersBoard board, int seat, List<_Ranked> ranked) {
-    final budget = _SearchBudget(nodeBudget);
-    final roots = _rootCandidates(board, seat, ranked);
+  CheckersMove _search(CheckersBoard board, int seat, List<_RatedMove> rated) {
+    final budget = _SearchBudget(maxNodes);
+    final roots = _rootCandidates(board, seat, rated);
     var best = roots.first;
     var bestValue = double.negativeInfinity;
 
     for (final candidate in roots) {
+      if (!budget.trySpend()) break;
       final after = board.copy()..move(candidate.move.from, candidate.move.to);
-      budget.nodes++;
-      final next = _nextSeat(after, seat);
-      final value = _searchValue(after, seat, next, 1, budget, bestValue);
+      final next = rules.nextSeat(after, seat, setup.players);
+      final value = _searchValue(
+        after,
+        seat,
+        next,
+        1,
+        budget,
+        _SearchWindow(bestValue, double.infinity),
+      );
       if (value > bestValue) {
         bestValue = value;
         best = candidate;
@@ -92,15 +119,15 @@ class CheckersAi {
   ///
   /// 堵空位通常是后退，静态估值很差，只按排名会被提前裁掉；
   /// 但它可能是唯一避免对手一步获胜的选择。
-  List<_Ranked> _rootCandidates(
+  List<_RatedMove> _rootCandidates(
     CheckersBoard board,
     int seat,
-    List<_Ranked> ranked,
+    List<_RatedMove> rated,
   ) {
-    final roots = ranked.take(rootBranch).toList();
+    final roots = rated.take(rootBranch).toList();
     final critical = _criticalSlots(board, seat);
     if (critical.isEmpty) return roots;
-    for (final candidate in ranked.skip(rootBranch)) {
+    for (final candidate in rated.skip(rootBranch)) {
       if (critical.contains(candidate.move.to)) roots.add(candidate);
     }
     return roots;
@@ -117,7 +144,7 @@ class CheckersAi {
       for (final hole in holes) {
         if (board.at(hole) == other) held++;
       }
-      if (held < holes.length - 2) continue;
+      if (held < holes.length - _criticalGap) continue;
       for (final hole in holes) {
         if (board.at(hole) != other) slots.add(hole);
       }
@@ -131,7 +158,7 @@ class CheckersAi {
     int current,
     int ply,
     _SearchBudget budget,
-    double alpha,
+    _SearchWindow window,
   ) {
     if (current < 0 || ply >= _depth || budget.exhausted) {
       return _heuristics.evaluate(board, seat);
@@ -141,58 +168,77 @@ class CheckersAi {
       return _searchValue(
         board,
         seat,
-        _nextSeat(board, current),
+        rules.nextSeat(board, current, setup.players),
         ply,
         budget,
-        alpha,
+        window,
       );
     }
 
     final maximizing = current == seat;
     final limit = maximizing ? followBranch : replyBranch;
-    final top = _rank(board, moves, current).take(limit);
-    var best = maximizing ? double.negativeInfinity : double.infinity;
+    final candidates = _rate(board, moves, current).take(limit);
 
-    for (final candidate in top) {
-      budget.nodes++;
+    if (maximizing) {
+      var best = double.negativeInfinity;
+      var alpha = window.alpha;
+      for (final candidate in candidates) {
+        if (!budget.trySpend()) break;
+        final after = board.copy()
+          ..move(candidate.move.from, candidate.move.to);
+        if (rules.hasWon(after, current, _heuristics.targetOf(current))) {
+          return AiHeuristics.winScore;
+        }
+        final value = _searchValue(
+          after,
+          seat,
+          rules.nextSeat(after, current, setup.players),
+          ply + 1,
+          budget,
+          _SearchWindow(alpha, window.beta),
+        );
+        if (value > best) best = value;
+        if (best > alpha) alpha = best;
+        if (alpha >= window.beta) break;
+      }
+      return best.isFinite ? best : _heuristics.evaluate(board, seat);
+    }
+
+    var best = double.infinity;
+    var beta = window.beta;
+    for (final candidate in candidates) {
+      if (!budget.trySpend()) break;
       final after = board.copy()..move(candidate.move.from, candidate.move.to);
       if (rules.hasWon(after, current, _heuristics.targetOf(current))) {
-        return maximizing ? AiHeuristics.winScore : -AiHeuristics.winScore;
+        return -AiHeuristics.winScore;
       }
       final value = _searchValue(
         after,
         seat,
-        _nextSeat(after, current),
+        rules.nextSeat(after, current, setup.players),
         ply + 1,
         budget,
-        maximizing ? best : alpha,
+        _SearchWindow(window.alpha, beta),
       );
-      if (maximizing) {
-        if (value > best) best = value;
-        if (best >= alpha) break;
-      } else {
-        if (value < best) best = value;
-        if (best <= alpha) break;
-      }
+      if (value < best) best = value;
+      if (best < beta) beta = best;
+      if (window.alpha >= beta) break;
     }
-    return best;
+    return best.isFinite ? best : _heuristics.evaluate(board, seat);
   }
 
   /// 2 / 3 / 4 人局搜索三个半回合，6 人局按整轮展开太贵，只走两步。
   int get _depth => setup.players <= 4 ? 3 : 2;
 
-  /// 走完 [from] 之后下一个仍有棋可走的座位，全部无棋可走时返回 -1。
-  int _nextSeat(CheckersBoard board, int from) {
-    for (var step = 1; step <= setup.players; step++) {
-      final seat = (from + step) % setup.players;
-      if (rules.legalMoves(board, seat).isNotEmpty) return seat;
-    }
-    return -1;
-  }
-
-  List<_Ranked> _rank(CheckersBoard board, List<CheckersMove> moves, int seat) {
+  /// 按指定座位评估落子后的局面，并按评分降序排列。
+  List<_RatedMove> _rate(
+    CheckersBoard board,
+    List<CheckersMove> moves,
+    int seat,
+  ) {
     return [
-      for (final move in moves) _Ranked(move, _valueAfter(board, move, seat)),
+      for (final move in moves)
+        _RatedMove(move, _valueAfter(board, move, seat)),
     ]..sort((a, b) => b.value.compareTo(a.value));
   }
 
@@ -219,11 +265,19 @@ class AiSearchStats {
   String toString() => '节点 $nodes, 深度 $depth, 候选 $candidates';
 }
 
-class _Ranked {
-  const _Ranked(this.move, this.value);
+class _RatedMove {
+  const _RatedMove(this.move, this.value);
 
   final CheckersMove move;
   final double value;
+}
+
+/// alpha-beta 的搜索窗口，[alpha] 是已确保的下界，[beta] 是上界。
+class _SearchWindow {
+  const _SearchWindow(this.alpha, this.beta);
+
+  final double alpha;
+  final double beta;
 }
 
 class _SearchBudget {
@@ -233,4 +287,11 @@ class _SearchBudget {
   int nodes = 0;
 
   bool get exhausted => nodes >= maxNodes;
+
+  /// 申请展开一个节点；预算用尽时返回 false，调用方必须停止循环。
+  bool trySpend() {
+    if (exhausted) return false;
+    nodes++;
+    return true;
+  }
 }

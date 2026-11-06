@@ -27,21 +27,19 @@ class CheckersController extends ChangeNotifier implements BoardSource {
   }) : geometry = geometry ?? BoardGeometry.star(),
        _random = random ?? Random() {
     rules = CheckersRules(this.geometry);
-    _ai = CheckersAi(
-      geometry: this.geometry,
-      rules: rules,
-      setup: setup,
-      random: _random,
-    );
-    _hintAi = CheckersAi(
-      geometry: this.geometry,
-      rules: rules,
-      setup: setup,
-      difficulty: Difficulty.hard,
-      random: _random,
-    );
+    _ai = _createAi();
+    // 提示用独立随机源：查看提示不应改变电脑后续走子的随机结果。
+    _hintAi = _createAi(difficulty: Difficulty.hard, random: Random());
     _resetState();
   }
+
+  CheckersAi _createAi({Difficulty? difficulty, Random? random}) => CheckersAi(
+    geometry: geometry,
+    rules: rules,
+    setup: setup,
+    difficulty: difficulty,
+    random: random ?? _random,
+  );
 
   /// 连续这么多步没有新棋子进营即判和。
   static const int maxQuietPlies = 120;
@@ -67,7 +65,7 @@ class CheckersController extends ChangeNotifier implements BoardSource {
   CheckersMove? hintMove;
   @override
   int? selectedHole;
-  final Map<int, CheckersMove> _targets = {};
+  final Map<int, CheckersMove> _movesByTarget = {};
   @override
   final List<MoveRecord> history = [];
   final List<_Snapshot> _undoStack = [];
@@ -92,7 +90,7 @@ class CheckersController extends ChangeNotifier implements BoardSource {
 
   CheckersMove? get lastMove => history.isEmpty ? null : history.last.move;
 
-  Set<int> get targetHoles => _targets.keys.toSet();
+  Set<int> get targetHoles => _movesByTarget.keys.toSet();
 
   /// 连续多少手没有新棋子进营，供测试校验悔棋后的恢复。
   @visibleForTesting
@@ -115,7 +113,7 @@ class CheckersController extends ChangeNotifier implements BoardSource {
 
   /// 选中棋子后可以直接落子的孔位。
   @override
-  Map<int, CheckersMove> get targets => Map.unmodifiable(_targets);
+  Map<int, CheckersMove> get targets => Map.unmodifiable(_movesByTarget);
 
   void start() {
     if (_startedAt != null) return;
@@ -132,7 +130,7 @@ class CheckersController extends ChangeNotifier implements BoardSource {
   void tapHole(int hole) {
     if (_disposed || isFinished || isAiThinking) return;
     if (!isHumanTurn) return;
-    final move = _targets[hole];
+    final move = _movesByTarget[hole];
     if (move != null) {
       applyMove(move);
       return;
@@ -150,11 +148,11 @@ class CheckersController extends ChangeNotifier implements BoardSource {
   void _select(int hole) {
     selectedHole = hole;
     if (hintMove != null && hintMove!.from != hole) hintMove = null;
-    _targets.clear();
+    _movesByTarget.clear();
     for (final move in rules.movesFrom(board, hole)) {
-      final existing = _targets[move.to];
+      final existing = _movesByTarget[move.to];
       if (existing == null || move.jumpCount < existing.jumpCount) {
-        _targets[move.to] = move;
+        _movesByTarget[move.to] = move;
       }
     }
     notifyListeners();
@@ -162,7 +160,7 @@ class CheckersController extends ChangeNotifier implements BoardSource {
 
   void _clearSelection() {
     selectedHole = null;
-    _targets.clear();
+    _movesByTarget.clear();
   }
 
   void applyMove(CheckersMove move) {
@@ -226,14 +224,10 @@ class CheckersController extends ChangeNotifier implements BoardSource {
 
   /// 轮到下一位仍有棋可走的玩家；全部无棋可走时返回 false。
   bool _advanceTurn() {
-    for (var step = 1; step <= players; step++) {
-      final next = (currentSeat + step) % players;
-      if (rules.legalMoves(board, next).isNotEmpty) {
-        currentSeat = next;
-        return true;
-      }
-    }
-    return false;
+    final next = rules.nextSeat(board, currentSeat, players);
+    if (next < 0) return false;
+    currentSeat = next;
+    return true;
   }
 
   void _scheduleAiIfNeeded() {
@@ -242,26 +236,29 @@ class CheckersController extends ChangeNotifier implements BoardSource {
     final epoch = ++_epoch;
     isAiThinking = true;
     notifyListeners();
-    Future<void>.delayed(aiDelay, () {
-      if (_disposed || epoch != _epoch || isFinished) return;
-      final move = _ai.chooseMove(board, currentSeat);
-      final search = _ai.lastSearch;
-      if (search != null) {
-        LogService.info('电脑搜索: 座位 ${currentSeat + 1}, $search');
-      }
-      isAiThinking = false;
-      if (move == null) {
-        final advanced = _advanceTurn();
-        if (!advanced) {
-          _endGame(message: '对局判和: 所有玩家均无合法着法');
-        } else {
-          notifyListeners();
-          _scheduleAiIfNeeded();
-        }
-        return;
-      }
+    Future<void>.delayed(aiDelay, () => _playAiTurn(epoch));
+  }
+
+  /// 电脑回合：选子、记录搜索开销，并在无棋可走时跳过该座位。
+  void _playAiTurn(int epoch) {
+    if (_disposed || epoch != _epoch || isFinished) return;
+    final seat = currentSeat;
+    final move = _ai.chooseMove(board, seat);
+    final search = _ai.lastSearch;
+    if (search != null) {
+      LogService.info('电脑搜索: 座位 ${seat + 1}, $search');
+    }
+    isAiThinking = false;
+    if (move != null) {
       applyMove(move);
-    });
+      return;
+    }
+    if (!_advanceTurn()) {
+      _endGame(message: '对局判和: 所有玩家均无合法着法');
+      return;
+    }
+    notifyListeners();
+    _scheduleAiIfNeeded();
   }
 
   /// 悔棋：同屏模式退一手；人机模式回退到上一次自己走棋之前。
