@@ -77,6 +77,7 @@
 - Windows版本最低支持Windows10
 - Windows版本支持不同窗口大小自适应
 - Android版本支持手机+折叠屏+平板电脑自适应布局
+- 在手机或折叠屏手机折叠态等窄屏比例时应根据需要自动进入横屏全屏模式以获得更大屏幕显示空间
 - 界面需要支持简体中文
 - Windows系统优先使用`Microsoft YaHei UI`字体, Android系统优先使用系统默认字体, web版本使用此依赖字体解决方案
   `https://pub.dev/packages/soup_fonts`
