@@ -113,3 +113,67 @@
 - **MAJOR** (重大不兼容更新)
 - **MINOR** (新功能，向下兼容)
 - **PATCH** (Bug 修复, 代码重构，向下兼容)
+
+# 有用的命令
+
+## 查询打开的Issues
+
+```shell
+gh issue list --state open --limit 3 --search "sort:created-desc"
+tea issues list --state open --limit 3
+```
+
+## 查询workflow runs
+
+```shell
+gh run list --limit 3
+tea actions runs list --limit 3
+```
+
+## 查看 workflow 日志
+
+```shell
+gh run view <run-id>                                   # 先看 jobs 列表与状态
+gh run view <run-id> --log                             # 全部日志
+gh run view <run-id> --log-failed                      # 只看失败步骤 (排错首选)
+gh run view --job <job-id> --log                       # 单个 job 的日志
+tea actions runs view <run-id>                         # 同样先看 jobs 表拿 job-id
+tea actions runs logs <run-id>                         # 全部日志
+tea actions runs logs <run-id> --job <job-id>          # 单个 job 的日志
+tea actions runs logs <run-id> --job <job-id> --follow # 实时跟随
+```
+
+## 手动触发 build 工作流 (发布时选定 Tag)
+
+```shell
+gh workflow list
+gh workflow run build.yml --ref v0.2.1
+tea actions workflows list
+tea actions workflows dispatch build.yml --ref refs/tags/v0.2.1 --follow
+```
+
+## 创建并推送 Git Tag
+
+```shell
+git describe --tags --abbrev=0              # 查看当前最新 tag
+git tag -a v0.2.1 -m "v0.2.1: 修复xxx"
+git push origin v0.2.1                      # 推送 Tag 不会自动触发构建
+```
+
+## 关闭 issue 并回复验证
+
+```shell
+gh issue close 12 --comment "已在 v0.2.1 修复, 下载地址: <url>, 请验证"
+gh issue comment 12 --body "补充说明"
+tea comment 12 "已在 v0.2.1 修复, 下载地址: <url>, 请验证"
+tea issues close 12                          # 可一次传多个序号
+```
+
+## 提交并推送代码
+
+```shell
+git status
+git add <文件...>
+git commit -m "fix(scope): 主题"
+git push origin main
+```
