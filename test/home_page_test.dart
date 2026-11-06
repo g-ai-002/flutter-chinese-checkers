@@ -8,6 +8,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'support/replay_fixtures.dart';
+
 Widget wrap(SettingsProvider settings) => ChangeNotifierProvider.value(
   value: settings,
   child: MaterialApp(theme: buildLightTheme(), home: const HomePage()),
@@ -105,5 +107,23 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('还没有对局记录'), findsOneWidget);
+  });
+
+  testWidgets('首页棋谱库入口展示已存档数量并可直接打开', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    StorageService.resetForTests();
+    final storage = await StorageService.instance;
+    await storage.addReplay(sampleArchive());
+    final settings = SettingsProvider(storage);
+    await tester.pumpWidget(wrap(settings));
+
+    expect(find.text('棋谱库'), findsOneWidget);
+    expect(find.text('已存 1 局 · 分享码导入导出'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('棋谱库'));
+    await tester.tap(find.text('棋谱库'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('2 人 · 同屏对战'), findsOneWidget);
   });
 }

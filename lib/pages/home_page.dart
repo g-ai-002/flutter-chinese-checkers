@@ -7,6 +7,7 @@ import '../models/game_models.dart';
 import '../models/match_summary.dart';
 import '../providers/settings_provider.dart';
 import '../utils/constants.dart';
+import 'archive_page.dart';
 import 'game_page.dart';
 import 'settings_page.dart';
 import 'stats_page.dart';
@@ -95,6 +96,17 @@ class HomePage extends StatelessWidget {
                               _start(context, settings, PlayMode.local),
                         ),
                         const SizedBox(height: 12),
+                        _ModeCard(
+                          icon: Icons.collections_bookmark_outlined,
+                          color: theme.colorScheme.secondary,
+                          title: '棋谱库',
+                          subtitle: settings.replays.isEmpty
+                              ? '终局自动存档 · 分享码导入导出'
+                              : '已存 ${settings.replays.length} 局 · '
+                                    '分享码导入导出',
+                          onTap: () => _openArchive(context),
+                        ),
+                        const SizedBox(height: 12),
                         _StatsCard(
                           summary: settings.matchSummary,
                           onTap: () => _openStats(context),
@@ -163,6 +175,11 @@ class HomePage extends StatelessWidget {
   void _openStats(BuildContext context) {
     Navigator.of(context)
         .push(MaterialPageRoute<void>(builder: (_) => const StatsPage()));
+  }
+
+  void _openArchive(BuildContext context) {
+    Navigator.of(context)
+        .push(MaterialPageRoute<void>(builder: (_) => const ArchivePage()));
   }
 }
 

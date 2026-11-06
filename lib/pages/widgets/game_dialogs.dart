@@ -62,7 +62,7 @@ Future<void> showGameResultDialog(
           if (record.moves > 0) ...[
             const SizedBox(height: 14),
             Text(
-              '本局最佳着法可在复盘棋谱中查看。',
+              '本局已存入棋谱库，可复盘、导出分享或随时回看。',
               style: Theme.of(dialogContext).textTheme.bodySmall?.copyWith(
                 color: Theme.of(dialogContext).colorScheme.onSurfaceVariant,
               ),

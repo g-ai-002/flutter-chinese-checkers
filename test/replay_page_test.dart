@@ -4,6 +4,7 @@ import 'package:chinese_checkers/game/checkers_rules.dart';
 import 'package:chinese_checkers/game/move_record.dart';
 import 'package:chinese_checkers/game/replay_controller.dart';
 import 'package:chinese_checkers/models/game_models.dart';
+import 'package:chinese_checkers/models/replay_archive.dart';
 import 'package:chinese_checkers/pages/replay_page.dart';
 import 'package:chinese_checkers/providers/settings_provider.dart';
 import 'package:chinese_checkers/services/storage_service.dart';
@@ -97,8 +98,12 @@ void main() {
         child: MaterialApp(
           theme: buildLightTheme(),
           home: ReplayPage(
-            setup: setup,
-            records: records ?? sampleRecords(moves),
+            archive: ReplayArchive.fromGame(
+              setup: setup,
+              records: records ?? sampleRecords(moves),
+              winner: 0,
+              duration: const Duration(minutes: 4),
+            ),
           ),
         ),
       ),
@@ -218,6 +223,21 @@ void main() {
 
     expect(find.textContaining('最佳着法'), findsNothing);
     expect(find.byIcon(Icons.auto_awesome), findsNothing);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('复盘页可导出当前棋谱分享码', (tester) async {
+    await pumpReplay(tester);
+
+    await tester.tap(find.byTooltip('导出棋谱'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('导出棋谱'), findsOneWidget);
+    expect(find.textContaining('TIAOQI1:'), findsOneWidget);
+    expect(find.text('复制'), findsOneWidget);
+    expect(tester.takeException(), isNull);
 
     await tester.pumpWidget(const SizedBox.shrink());
   });

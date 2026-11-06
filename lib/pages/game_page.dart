@@ -7,6 +7,7 @@ import '../flame/checkers_game.dart';
 import '../game/checkers_controller.dart';
 import '../models/game_models.dart';
 import '../models/match_record.dart';
+import '../models/replay_archive.dart';
 import '../providers/settings_provider.dart';
 import '../services/log_service.dart';
 import '../services/sound_service.dart';
@@ -86,27 +87,36 @@ class _GamePageState extends State<GamePage> {
   }
 
   void _openReplay() {
-    final records = _controller.records;
-    if (records.isEmpty) return;
+    if (_controller.history.isEmpty) return;
     Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => ReplayPage(setup: widget.setup, records: records),
-      ),
+      MaterialPageRoute<void>(builder: (_) => ReplayPage(archive: _archive())),
     );
   }
 
+  /// 当前对局的完整棋谱，复盘与终局存档共用。
+  ReplayArchive _archive() => ReplayArchive.fromGame(
+    setup: widget.setup,
+    records: _controller.records,
+    winner: _controller.winner,
+    duration: _controller.duration,
+  );
+
   void _showResult() {
+    final settings = context.read<SettingsProvider>();
     final record = MatchRecord.fromGame(
       setup: widget.setup,
       records: _controller.records,
       winner: _controller.winner,
       duration: _controller.duration,
     );
-    unawaited(context.read<SettingsProvider>().recordMatch(record));
+    final archive = _archive();
+    unawaited(settings.recordMatch(record));
+    unawaited(settings.saveReplay(archive));
     LogService.info(
       '记录对局: ${record.outcomeLabel}, ${record.moves} 步, '
       '最长连跳 ${record.longestJump}, 用时 ${record.duration.inSeconds}s',
     );
+    LogService.info('存档棋谱: ${archive.title}, ${archive.moves} 手');
     showGameResultDialog(
       context,
       record: record,

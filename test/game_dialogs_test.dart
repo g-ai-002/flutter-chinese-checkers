@@ -61,7 +61,7 @@ void main() {
     expect(find.text('×3'), findsOneWidget);
     expect(find.text('入营效率'), findsOneWidget);
     expect(find.text('3.0 步/子'), findsOneWidget);
-    expect(find.text('本局最佳着法可在复盘棋谱中查看。'), findsOneWidget);
+    expect(find.text('本局已存入棋谱库，可复盘、导出分享或随时回看。'), findsOneWidget);
     expect(find.text('复盘本局'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());

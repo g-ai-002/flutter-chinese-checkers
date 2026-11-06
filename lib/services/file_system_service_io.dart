@@ -35,6 +35,24 @@ class FileSystemService {
 
   Future<String> getLogRootPath() async => (await getLogRoot()).path;
 
+  /// 把棋谱写入用户目录下的 `FlutterTiaoqi/replays`，成功返回文件路径。
+  Future<String?> saveExport(String fileName, String content) async {
+    try {
+      final base = await _baseDir();
+      final separator = Platform.pathSeparator;
+      final dir = Directory(
+        '${base.path}${separator}FlutterTiaoqi${separator}replays',
+      );
+      if (!await dir.exists()) await dir.create(recursive: true);
+      final file = File('${dir.path}$separator$fileName');
+      await file.writeAsString(content);
+      return file.path;
+    } catch (e, stack) {
+      LogService.error('保存导出文件失败: $fileName', e, stack);
+      return null;
+    }
+  }
+
   /// 打开系统文件管理器定位到目录，失败返回 false。
   Future<bool> openDirectory(String path) async {
     try {

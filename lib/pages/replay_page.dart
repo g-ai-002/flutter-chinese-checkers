@@ -2,21 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../flame/checkers_game.dart';
-import '../game/move_record.dart';
 import '../game/replay_controller.dart';
-import '../models/game_models.dart';
+import '../models/replay_archive.dart';
 import '../providers/settings_provider.dart';
 import '../services/log_service.dart';
 import '../utils/constants.dart';
 import 'widgets/board_stage.dart';
+import 'widgets/replay_exchange.dart';
 import 'widgets/replay_widgets.dart';
 
 /// 对局复盘：逐手回看已结束的对局，也可以自动播放。
 class ReplayPage extends StatefulWidget {
-  const ReplayPage({super.key, required this.setup, required this.records});
+  const ReplayPage({super.key, required this.archive});
 
-  final GameSetup setup;
-  final List<MoveRecord> records;
+  final ReplayArchive archive;
 
   @override
   State<ReplayPage> createState() => _ReplayPageState();
@@ -30,7 +29,10 @@ class _ReplayPageState extends State<ReplayPage> {
   @override
   void initState() {
     super.initState();
-    _replay = ReplayController(setup: widget.setup, records: widget.records);
+    _replay = ReplayController(
+      setup: widget.archive.setup,
+      records: widget.archive.records,
+    );
     _game = CheckersGame(
       source: _replay,
       theme: context.read<SettingsProvider>().boardTheme,
@@ -38,8 +40,8 @@ class _ReplayPageState extends State<ReplayPage> {
     );
     _replay.addListener(_syncScroll);
     LogService.info(
-      '查看复盘: ${widget.setup.playerCount.label}, '
-      '${widget.records.length} 手',
+      '查看复盘: ${widget.archive.setup.playerCount.label}, '
+      '${widget.archive.moves} 手',
     );
   }
 
@@ -114,6 +116,11 @@ class _ReplayPageState extends State<ReplayPage> {
               onPressed: _openMoveSheet,
               icon: const Icon(Icons.list_alt, size: 21),
             ),
+          IconButton(
+            tooltip: '导出棋谱',
+            onPressed: () => showReplayExportDialog(context, widget.archive),
+            icon: const Icon(Icons.ios_share, size: 20),
+          ),
           const SizedBox(width: 6),
         ],
       ),
