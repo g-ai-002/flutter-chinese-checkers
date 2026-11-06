@@ -75,9 +75,6 @@ jobs:
       - name: 📥 检出代码
         uses: actions/checkout@v6
 
-      - name: 📦 安装依赖
-        run: flutter pub get
-
       - name: 🩺 诊断网络与 Flutter 环境
         run: |
           echo "=== 🌍 构建环境变量 ==="
@@ -104,9 +101,9 @@ jobs:
           echo "=== 🌍 Flutter 相关环境变量 ==="
           echo "FLUTTER_STORAGE_BASE_URL=${FLUTTER_STORAGE_BASE_URL:-<未设置>}"
           echo "PUB_HOSTED_URL=${PUB_HOSTED_URL:-<未设置>}"
-          echo "=== 🌐 网络连通性检查 ==="
-          curl -sI --connect-timeout 10 https://storage.flutter-io.cn 2>&1 || echo "❌ 无法访问 storage.flutter-io.cn"
-          curl -sI --connect-timeout 10 https://storage.googleapis.com 2>&1 || echo "❌ 无法访问 storage.googleapis.com"
+
+      - name: 📦 安装依赖
+        run: flutter pub get
 
       - name: 🪞 部署阿里云 Maven 镜像脚本
         run: |
@@ -180,9 +177,6 @@ jobs:
           echo "=== 🌍 Flutter 相关环境变量 ==="
           echo "FLUTTER_STORAGE_BASE_URL=${FLUTTER_STORAGE_BASE_URL:-<未设置>}"
           echo "PUB_HOSTED_URL=${PUB_HOSTED_URL:-<未设置>}"
-          echo "=== 🌐 网络连通性检查 ==="
-          curl -sI --connect-timeout 10 https://storage.flutter-io.cn 2>&1 || echo "❌ 无法访问 storage.flutter-io.cn"
-          curl -sI --connect-timeout 10 https://storage.googleapis.com 2>&1 || echo "❌ 无法访问 storage.googleapis.com"
 
       - name: 📦 安装依赖
         shell: bash
@@ -256,6 +250,28 @@ jobs:
     steps:
       - name: 📥 检出代码
         uses: actions/checkout@v6
+
+      - name: 🩺 诊断网络与 Flutter 环境
+        run: |
+          echo "=== 🌍 构建环境变量 ==="
+          echo "http_proxy=${http_proxy:-<未设置>}"
+          echo "https_proxy=${https_proxy:-<未设置>}"
+          echo "=== 🦋 Flutter 版本 ==="
+          flutter --version
+          echo "=== 🩺 Flutter doctor（输出写入 doctor.log，最多等 20s） ==="
+          # 不能让 doctor 直接写步骤日志：一旦有子进程残留，它会一直占着日志管道，
+          # 步骤就永远走不到下一步（曾因此在同一位置卡死 7 分钟）。
+          # stdin 接 /dev/null，避免子命令等交互输入。
+          timeout -k 5 20 flutter doctor -v > doctor.log 2>&1 </dev/null || true
+          cat doctor.log 2>/dev/null || true
+          # timeout 只覆盖 msys 进程组，残留的 dart 会占住 flutter 启动锁，后面 pub get/build 会死等
+          if pgrep -f flutter_tools.snapshot > /dev/null 2>&1; then
+            echo "⚠️ flutter doctor 仍有残留进程，强制清理"
+            pkill -f flutter_tools.snapshot > /dev/null 2>&1 || true
+          fi
+          echo "=== 🌍 Flutter 相关环境变量 ==="
+          echo "FLUTTER_STORAGE_BASE_URL=${FLUTTER_STORAGE_BASE_URL:-<未设置>}"
+          echo "PUB_HOSTED_URL=${PUB_HOSTED_URL:-<未设置>}"
 
       - name: 📦 安装依赖
         run: flutter pub get
