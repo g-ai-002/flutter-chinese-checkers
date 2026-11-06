@@ -1,13 +1,11 @@
-//当 USE_ALIYUN_MAVEN=true 时，全局替换所有仓库为阿里云镜像。
+//当 USE_MIRRORPROXY=true 时，全局替换所有仓库为内网 Maven 镜像代理。
 //init script 对所有 Gradle 构建生效，包括 Flutter SDK 的 includeBuild 复合构建。
 //未设置时不做任何操作，走 Gradle/Flutter 默认源。
 
-def useAliyun = System.getenv('USE_ALIYUN_MAVEN') == 'true'
+def useMirrorProxy = System.getenv('USE_MIRRORPROXY') == 'true'
 
-if (useAliyun) {
-    def aliPublic = 'https://maven.aliyun.com/repository/public'
-    def aliGoogle = 'https://maven.aliyun.com/repository/google'
-    def aliPlugin = 'https://maven.aliyun.com/repository/gradle-plugin'
+if (useMirrorProxy) {
+    def mirrorMaven = 'http://192.168.31.120:1001/maven/'
 
     // 为所有 Settings（含 included builds）配置 pluginManagement 和 dependencyResolutionManagement
     // AGP 9.x 默认 PREFER_SETTINGS 模式，禁止 project 级别 repositories，必须在 settings 级别配置
@@ -15,9 +13,11 @@ if (useAliyun) {
         settings.pluginManagement {
             repositories {
                 clear()
-                maven { url aliPublic }
-                maven { url aliGoogle }
-                maven { url aliPlugin }
+                maven {
+                    url mirrorMaven
+                    // 内网镜像只提供 HTTP，没有 TLS，Gradle 需显式允许不安全协议
+                    allowInsecureProtocol = true
+                }
                 mavenCentral()
                 google()
                 gradlePluginPortal()
@@ -26,8 +26,11 @@ if (useAliyun) {
         settings.dependencyResolutionManagement {
             repositories {
                 clear()
-                maven { url aliPublic }
-                maven { url aliGoogle }
+                maven {
+                    url mirrorMaven
+                    // 内网镜像只提供 HTTP，没有 TLS，Gradle 需显式允许不安全协议
+                    allowInsecureProtocol = true
+                }
                 mavenCentral()
                 google()
             }
@@ -39,11 +42,14 @@ if (useAliyun) {
         buildscript {
             repositories {
                 clear()
-                maven { url aliPublic }
-                maven { url aliGoogle }
-                maven { url aliPlugin }
+                maven {
+                    url mirrorMaven
+                    // 内网镜像只提供 HTTP，没有 TLS，Gradle 需显式允许不安全协议
+                    allowInsecureProtocol = true
+                }
                 mavenCentral()
                 google()
+                gradlePluginPortal()
             }
         }
     }

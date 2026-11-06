@@ -10,10 +10,11 @@ pluginManagement {
     includeBuild("$flutterSdkPath/packages/flutter_tools/gradle")
 
     repositories {
-        if (System.getenv('USE_ALIYUN_MAVEN') == 'true') {
-            maven { url 'https://maven.aliyun.com/repository/public' }
-            maven { url 'https://maven.aliyun.com/repository/google' }
-            maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
+        if (System.getenv('USE_MIRRORPROXY') == 'true') {
+            maven {
+                url 'http://192.168.31.120:1001/maven/'
+                allowInsecureProtocol = true
+            }
         }
         mavenCentral()
         google()

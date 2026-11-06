@@ -101,7 +101,7 @@ jobs:
       - name: 🩺 诊断网络与 Flutter 环境
         run: |
           echo "=== 🌍 构建环境变量 ==="
-          echo "USE_ALIYUN_MAVEN=${USE_ALIYUN_MAVEN:-<未设置>}"
+          echo "USE_MIRRORPROXY=${USE_MIRRORPROXY:-<未设置>}"
           echo "JAVA_HOME=${JAVA_HOME:-<未设置>}"
           echo "ANDROID_HOME=${ANDROID_HOME:-<未设置>}"
           echo "ANDROID_SDK_ROOT=${ANDROID_SDK_ROOT:-<未设置>}"
