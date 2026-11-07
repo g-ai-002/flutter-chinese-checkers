@@ -1,4 +1,3 @@
-/// 全局时间格式化工具。
 library;
 
 String pad2(int value) => value.toString().padLeft(2, '0');

@@ -4,7 +4,6 @@ import '../../models/game_models.dart';
 import '../../models/replay_archive.dart';
 import '../../utils/formatters.dart';
 
-/// 棋谱库为空时的引导。
 class ArchiveEmptyState extends StatelessWidget {
   const ArchiveEmptyState({super.key, required this.onImport});
 
@@ -48,7 +47,6 @@ class ArchiveEmptyState extends StatelessWidget {
   }
 }
 
-/// 棋谱库的一条记录：概要信息、打开复盘与更多操作。
 class ReplayArchiveTile extends StatelessWidget {
   const ReplayArchiveTile({
     super.key,
@@ -124,7 +122,26 @@ class ReplayArchiveTile extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              _OutcomeBadge(archive: archive),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color:
+                      (archive.isDraw
+                              ? theme.colorScheme.onSurfaceVariant
+                              : theme.colorScheme.tertiary)
+                          .withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  archive.outcomeLabel,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: archive.isDraw
+                        ? theme.colorScheme.onSurfaceVariant
+                        : theme.colorScheme.tertiary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
               PopupMenuButton<String>(
                 tooltip: '棋谱操作',
                 icon: const Icon(Icons.more_vert, size: 20),
@@ -142,35 +159,6 @@ class ReplayArchiveTile extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _OutcomeBadge extends StatelessWidget {
-  const _OutcomeBadge({required this.archive});
-
-  final ReplayArchive archive;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final draw = archive.isDraw;
-    final color = draw
-        ? theme.colorScheme.onSurfaceVariant
-        : theme.colorScheme.tertiary;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        archive.outcomeLabel,
-        style: theme.textTheme.labelSmall?.copyWith(
-          color: color,
-          fontWeight: FontWeight.w700,
         ),
       ),
     );

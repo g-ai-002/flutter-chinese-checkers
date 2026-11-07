@@ -101,7 +101,6 @@ class MatchRecord {
   final int moves;
   final Duration duration;
 
-  /// 本局最长连跳的跳数，单步为 0。
   final int longestJump;
 
   /// 首手类型，例如「连跳 ×2」，用于统计常用开局。

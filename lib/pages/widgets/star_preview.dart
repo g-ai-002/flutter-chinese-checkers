@@ -8,7 +8,6 @@ import '../../game/checkers_board.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/player_palette.dart';
 
-/// 首页的棋盘缩略图：完整六角星与开局棋子，纯 CustomPaint 绘制。
 class StarPreview extends StatelessWidget {
   const StarPreview({super.key, required this.theme, this.players = 6});
 

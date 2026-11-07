@@ -53,7 +53,6 @@ class FileSystemService {
     }
   }
 
-  /// 打开系统文件管理器定位到目录，失败返回 false。
   Future<bool> openDirectory(String path) async {
     try {
       if (Platform.isWindows) {

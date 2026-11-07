@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -21,6 +20,7 @@ import 'widgets/challenge_widgets.dart';
 import 'widgets/confirm_dialog.dart';
 import 'widgets/game_dialogs.dart';
 import 'widgets/game_hud.dart';
+import 'widgets/game_layout.dart';
 
 class GamePage extends StatefulWidget {
   const GamePage({super.key, required this.setup});
@@ -248,155 +248,165 @@ class _GamePageState extends State<GamePage> {
           child: LayoutBuilder(
             builder: (context, constraints) {
               final wide = constraints.maxWidth >= kGameWideBreakpoint;
-              final dense = constraints.maxHeight < 700;
-              // 右侧为复盘 / 玩法按钮留出位置，标题在其中省略而不是被压住。
-              final rightReserve = challenge == null ? 112.0 : 62.0;
-              final hudMaxWidth = math.max(
-                180.0,
-                constraints.maxWidth - 20 - rightReserve,
+              final layout = GameLayout.resolve(
+                size: constraints.biggest,
+                challenge: challenge != null,
+                players: widget.setup.players,
+                showProgressTitle: wide,
               );
-              final hudWidth = math.min(230.0, hudMaxWidth);
-              return Stack(
-                children: [
-                  // 棋盘独占整个可用区域，四周信息全部叠在它上面。
-                  Positioned.fill(
-                    child: BoardStage(
-                      game: _game,
-                      gameKey: const ValueKey('board'),
-                      maxWidth: double.infinity,
+              // 浮层尺寸固定，字号最多放大到 1.3 倍，避免撑破布局。
+              return MediaQuery.withClampedTextScaling(
+                maxScaleFactor: 1.3,
+                child: Stack(
+                  children: [
+                    // 棋盘独占可用区域；竖屏时上下信息带由 BoardStage 让出。
+                    Positioned.fill(
+                      child: BoardStage(
+                        game: _game,
+                        gameKey: const ValueKey('board'),
+                        maxWidth: double.infinity,
+                        padding: layout.boardInsets,
+                      ),
                     ),
-                  ),
-                  Positioned(
-                    left: 10,
-                    top: 8,
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(maxWidth: hudMaxWidth),
+                    Positioned(
+                      left: layout.left,
+                      top: layout.top,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              HudButton(
-                                icon: Icons.arrow_back,
-                                tooltip: '返回',
-                                onPressed: _leave,
-                              ),
-                              const SizedBox(width: 8),
-                              Flexible(
-                                child: HudPanel(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 9,
-                                  ),
-                                  child: Text(
-                                    _title,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleSmall,
+                          SizedBox(
+                            width: layout.titleWidth,
+                            child: Row(
+                              children: [
+                                HudButton(
+                                  icon: Icons.arrow_back,
+                                  tooltip: '返回',
+                                  onPressed: _leave,
+                                ),
+                                const SizedBox(width: 8),
+                                Flexible(
+                                  child: HudPanel(
+                                    key: const ValueKey('hud-title'),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 9,
+                                    ),
+                                    child: Text(
+                                      _title,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleSmall,
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                           const SizedBox(height: 8),
                           _watch(
                             () => challenge == null
                                 ? TurnHud(
+                                    key: const ValueKey('hud-status'),
                                     controller: _controller,
-                                    width: hudWidth,
-                                    dense: dense,
+                                    width: layout.hudWidth,
+                                    dense: layout.dense,
                                   )
                                 : ChallengeHud(
+                                    key: const ValueKey('hud-status'),
                                     controller: _controller,
                                     level: challenge,
-                                    width: hudWidth,
+                                    width: layout.hudWidth,
                                   ),
                           ),
                         ],
                       ),
                     ),
-                  ),
-                  Positioned(
-                    right: 10,
-                    top: 8,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (challenge == null) ...[
-                              _watch(
-                                () => HudButton(
-                                  icon: Icons.history,
-                                  tooltip: _controller.isFinished
-                                      ? '复盘'
-                                      : '复盘（终局后可查看）',
-                                  onPressed: _controller.isFinished
-                                      ? _openReplay
-                                      : null,
+                    Positioned(
+                      right: layout.rightTop,
+                      top: layout.top,
+                      child: Column(
+                        key: const ValueKey('hud-tools'),
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (challenge == null) ...[
+                                _watch(
+                                  () => HudButton(
+                                    icon: Icons.history,
+                                    tooltip: _controller.isFinished
+                                        ? '复盘'
+                                        : '复盘（终局后可查看）',
+                                    onPressed: _controller.isFinished
+                                        ? _openReplay
+                                        : null,
+                                  ),
                                 ),
+                                const SizedBox(width: 6),
+                              ],
+                              HudButton(
+                                icon: Icons.info_outline,
+                                tooltip: '玩法说明',
+                                onPressed: () => showRulesDialog(context),
                               ),
-                              const SizedBox(width: 6),
                             ],
+                          ),
+                          if (challenge != null) ...[
+                            const SizedBox(height: 8),
                             HudButton(
-                              icon: Icons.info_outline,
-                              tooltip: '玩法说明',
-                              onPressed: () => showRulesDialog(context),
+                              icon: Icons.flag_outlined,
+                              tooltip: '查看关卡目标',
+                              label: '关卡目标',
+                              onPressed: () =>
+                                  showChallengeBriefDialog(context, challenge),
                             ),
                           ],
-                        ),
-                        if (challenge != null) ...[
-                          const SizedBox(height: 8),
-                          HudButton(
-                            icon: Icons.flag_outlined,
-                            tooltip: '查看关卡目标',
-                            label: '关卡目标',
-                            onPressed: () =>
-                                showChallengeBriefDialog(context, challenge),
-                          ),
                         ],
-                      ],
-                    ),
-                  ),
-                  if (challenge == null)
-                    Positioned(
-                      left: 10,
-                      bottom: 10,
-                      child: dense
-                          ? HudButton(
-                              icon: Icons.leaderboard_outlined,
-                              tooltip: '对局进度',
-                              onPressed: () => showPlayerProgressDialog(
-                                context,
-                                _controller,
-                              ),
-                            )
-                          : _watch(
-                              () => PlayersHud(
-                                controller: _controller,
-                                width: wide ? 132 : 122,
-                                showTitle: wide,
-                              ),
-                            ),
-                    ),
-                  Positioned(
-                    right: 10,
-                    bottom: 10,
-                    child: _watch(
-                      () => ActionDock(
-                        controller: _controller,
-                        onHint: _controller.requestHint,
-                        onUndo: _controller.undo,
-                        onRestart: _requestRestart,
-                        showUndo: challenge == null,
                       ),
                     ),
-                  ),
-                ],
+                    if (challenge == null)
+                      Positioned(
+                        left: layout.left,
+                        bottom: layout.bottom,
+                        child: layout.progressButton
+                            ? HudButton(
+                                key: const ValueKey('hud-progress'),
+                                icon: Icons.leaderboard_outlined,
+                                tooltip: '对局进度',
+                                onPressed: () => showPlayerProgressDialog(
+                                  context,
+                                  _controller,
+                                ),
+                              )
+                            : _watch(
+                                () => PlayersHud(
+                                  key: const ValueKey('hud-progress'),
+                                  controller: _controller,
+                                  width: layout.progressWidth,
+                                  showTitle: wide && !layout.dense,
+                                ),
+                              ),
+                      ),
+                    Positioned(
+                      right: layout.rightBottom,
+                      bottom: layout.bottom,
+                      child: _watch(
+                        () => ActionDock(
+                          key: const ValueKey('hud-actions'),
+                          controller: _controller,
+                          onHint: _controller.requestHint,
+                          onUndo: _controller.undo,
+                          onRestart: _requestRestart,
+                          showUndo: challenge == null,
+                          compact: layout.compactDock,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               );
             },
           ),

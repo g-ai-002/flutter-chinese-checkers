@@ -11,7 +11,6 @@ import 'widgets/board_stage.dart';
 import 'widgets/replay_exchange.dart';
 import 'widgets/replay_widgets.dart';
 
-/// 对局复盘：逐手回看已结束的对局，也可以自动播放。
 class ReplayPage extends StatefulWidget {
   const ReplayPage({super.key, required this.archive});
 
@@ -164,13 +163,17 @@ class _ReplayPageState extends State<ReplayPage> {
   }
 
   Widget _buildCompact() {
+    // 矮窗口把高度让给棋盘：收起顶部进度条，进度仍可在棋谱浮层里查看。
+    final short = MediaQuery.sizeOf(context).height < 560;
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
-          child: _banner(),
-        ),
-        const SizedBox(height: 8),
+        if (!short) ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
+            child: _banner(),
+          ),
+          const SizedBox(height: 8),
+        ],
         Expanded(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8),

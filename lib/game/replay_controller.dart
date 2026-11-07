@@ -56,7 +56,6 @@ class ReplayController extends ChangeNotifier implements BoardSource {
   @override
   final BoardGeometry geometry;
 
-  /// 自动播放时每一手的间隔。
   final Duration playInterval;
 
   final List<MoveRecord> _records;
@@ -84,6 +83,12 @@ class ReplayController extends ChangeNotifier implements BoardSource {
   @override
   int get animationStartIndex => _animationStart;
 
+  /// 逐手播放前先高亮即将移动的棋子，给玩家一个眼神落点。
+  static const Duration leadIn = Duration(milliseconds: 280);
+
+  @override
+  Duration get animationLeadIn => leadIn;
+
   @override
   int? get selectedHole => null;
 
@@ -98,7 +103,6 @@ class ReplayController extends ChangeNotifier implements BoardSource {
   @override
   List<MoveRecord> get history => _historyView;
 
-  /// 已经回放的手数。
   int get index => _index;
 
   int get total => _records.length;
@@ -109,7 +113,6 @@ class ReplayController extends ChangeNotifier implements BoardSource {
 
   bool get atEnd => _index >= total;
 
-  /// 当前进度对应的最后一手，开局为 null。
   ReplayStep? get currentStep => _index == 0 ? null : _steps[_index - 1];
 
   /// 本局最佳着法的序号（1 起），没有可圈可点的着法时为 null。

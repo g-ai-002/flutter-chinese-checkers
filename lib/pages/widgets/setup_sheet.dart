@@ -4,7 +4,6 @@ import '../../models/game_models.dart';
 import '../../providers/settings_provider.dart';
 import '../../theme/player_palette.dart';
 
-/// 开局设置弹窗：人数、座位与难度。
 Future<GameSetup?> showGameSetupSheet(
   BuildContext context, {
   required PlayMode mode,
@@ -72,11 +71,8 @@ class _SetupSheetState extends State<_SetupSheet> {
                 ),
               ),
               const SizedBox(height: 20),
-              const _Label(text: '玩家人数'),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
+              _ChoiceGroup(
+                label: '玩家人数',
                 children: [
                   for (final value in PlayerCount.values)
                     ChoiceChip(
@@ -91,11 +87,8 @@ class _SetupSheetState extends State<_SetupSheet> {
               ),
               if (isAi) ...[
                 const SizedBox(height: 20),
-                const _Label(text: '我的座位'),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
+                _ChoiceGroup(
+                  label: '我的座位',
                   children: [
                     for (var seat = 0; seat < _count.count; seat++)
                       ChoiceChip(
@@ -110,11 +103,8 @@ class _SetupSheetState extends State<_SetupSheet> {
                   ],
                 ),
                 const SizedBox(height: 20),
-                const _Label(text: '电脑难度'),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
+                _ChoiceGroup(
+                  label: '电脑难度',
                   children: [
                     for (final value in Difficulty.values)
                       ChoiceChip(
@@ -161,17 +151,25 @@ class _SetupSheetState extends State<_SetupSheet> {
   }
 }
 
-class _Label extends StatelessWidget {
-  const _Label({required this.text});
+class _ChoiceGroup extends StatelessWidget {
+  const _ChoiceGroup({required this.label, required this.children});
 
-  final String text;
+  final String label;
+  final List<Widget> children;
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: Theme.of(context).textTheme.titleSmall
-          ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: Theme.of(context).textTheme.titleSmall
+              ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+        ),
+        const SizedBox(height: 8),
+        Wrap(spacing: 8, runSpacing: 8, children: children),
+      ],
     );
   }
 }

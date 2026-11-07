@@ -9,7 +9,6 @@ import 'game_page.dart';
 import 'widgets/challenge_widgets.dart';
 import 'widgets/confirm_dialog.dart';
 
-/// 残局挑战：按难度分组列出关卡，通关后解锁下一关。
 class ChallengePage extends StatelessWidget {
   const ChallengePage({super.key});
 
@@ -84,15 +83,11 @@ class ChallengePage extends StatelessWidget {
 
   Future<void> _start(BuildContext context, ChallengeLevel level) async {
     final setup = GameSetup.forChallenge(level);
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => GamePage(setup: setup)),
-    );
+    await Navigator.of(context)
+        .push(MaterialPageRoute<void>(builder: (_) => GamePage(setup: setup)));
   }
 
-  Future<void> _reset(
-    BuildContext context,
-    SettingsProvider settings,
-  ) async {
+  Future<void> _reset(BuildContext context, SettingsProvider settings) async {
     final confirmed = await showConfirmDialog(
       context,
       title: '重置挑战进度？',

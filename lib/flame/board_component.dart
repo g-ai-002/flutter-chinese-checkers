@@ -37,6 +37,8 @@ class BoardComponent extends PositionComponent with TapCallbacks {
   Offset _origin = Offset.zero;
   double _rotation = 0;
   int _seenHistory = 0;
+  late final double _leadIn =
+      source.animationLeadIn.inMicroseconds / Duration.microsecondsPerSecond;
   late CheckersBoard _mirror;
   final MoveAnimator _animator = MoveAnimator();
   double _time = 0;
@@ -125,7 +127,9 @@ class BoardComponent extends PositionComponent with TapCallbacks {
     for (var i = _seenHistory; i < records.length; i++) {
       final move = records[i].move;
       _mirror.move(move.from, move.to);
-      if (i >= animateFrom) _animator.enqueue(move, _mirror.cells);
+      if (i >= animateFrom) {
+        _animator.enqueue(move, _mirror.cells, leadIn: _leadIn);
+      }
     }
     _seenHistory = records.length;
   }
@@ -161,6 +165,8 @@ class BoardComponent extends PositionComponent with TapCallbacks {
       _drawSelection(canvas, cells);
       _drawTargets(canvas);
       _drawHint(canvas);
+    } else if (anim.previewing) {
+      _drawCue(canvas, anim);
     }
     _drawPieces(canvas, cells, anim);
     canvas.restore();
@@ -330,6 +336,41 @@ class BoardComponent extends PositionComponent with TapCallbacks {
       center,
       radius + _scale * (0.06 + pulse * 0.03),
       Paint()..color = style.light.withValues(alpha: 0.18 + pulse * 0.12),
+    );
+  }
+
+  /// 复盘逐手播放前的预高亮：让即将移动的棋子先亮起来。
+  ///
+  /// 这一步不改变局面，只画在起点棋子周围，给玩家一个眼神落点。
+  void _drawCue(Canvas canvas, MoveAnimation anim) {
+    final seat = anim.cells[anim.move.to];
+    if (seat < 0) return;
+    final style = playerStyleOf(seat);
+    final center = _point(anim.move.from);
+    final lead = anim.leadIn <= 0
+        ? 1.0
+        : (anim.elapsed / anim.leadIn).clamp(0.0, 1.0);
+    final pulse = 0.5 - 0.5 * math.cos(lead * math.pi * 2.4);
+    canvas.drawCircle(
+      center,
+      _scale * 0.44,
+      Paint()..color = style.light.withValues(alpha: 0.16 + 0.14 * pulse),
+    );
+    canvas.drawCircle(
+      center,
+      _scale * (0.5 + 0.12 * pulse),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = _scale * 0.07
+        ..color = style.light.withValues(alpha: 0.9),
+    );
+    canvas.drawCircle(
+      center,
+      _scale * (0.58 + 0.2 * pulse),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = _scale * 0.03
+        ..color = style.light.withValues(alpha: 0.5 * (1 - pulse)),
     );
   }
 
@@ -606,11 +647,20 @@ class BoardComponent extends PositionComponent with TapCallbacks {
   /// 当前是否需要持续刷新：走子动画或选中棋子的呼吸高亮。
   bool get wantsFrames => _animator.isAnimating || source.selectedHole != null;
 
-  /// 当前是否有待播放的走子动画。
   @visibleForTesting
   bool get isAnimating => _animator.isAnimating;
 
-  /// 待播放的动画数量。
+  /// 当前是否处于走子前的预高亮阶段。
+  @visibleForTesting
+  bool get isPreviewing => _animator.current?.previewing ?? false;
+
+  /// 预高亮阶段被点亮的起点孔位，没有预高亮时为 null。
+  @visibleForTesting
+  int? get previewHole {
+    final anim = _animator.current;
+    return anim != null && anim.previewing ? anim.move.from : null;
+  }
+
   @visibleForTesting
   int get pendingAnimations => _animator.pending;
 }

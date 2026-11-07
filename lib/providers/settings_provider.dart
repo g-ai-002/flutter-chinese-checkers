@@ -108,9 +108,9 @@ class SettingsProvider extends ChangeNotifier {
       challengeResults[level.id];
 
   /// 已通关的关卡数，未知 id 不计入。
-  int get challengeCompleted =>
-      kChallengeLevels.where((level) => challengeResults.containsKey(level.id))
-          .length;
+  int get challengeCompleted => kChallengeLevels
+      .where((level) => challengeResults.containsKey(level.id))
+      .length;
 
   int get challengeStars => kChallengeLevels.fold(
     0,

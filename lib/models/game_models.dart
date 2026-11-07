@@ -1,6 +1,5 @@
 import '../game/challenge_levels.dart';
 
-/// 对局模式。
 enum PlayMode {
   vsAi('人机对战'),
   local('同屏对战');
@@ -18,7 +17,6 @@ enum PlayMode {
   }
 }
 
-/// 电脑难度。
 enum Difficulty {
   easy('入门', '随机挑一步能走通的棋'),
   normal('普通', '优先向前推进，能连跳就连跳'),
@@ -103,7 +101,6 @@ class GameSetup {
   bool isHuman(int seat) =>
       isChallenge || mode == PlayMode.local || seat == humanSeat;
 
-  /// 目标营地：正对面的角。
   int targetArmOf(int seat) => (seatArms[seat] + 3) % 6;
 
   String seatLabel(int seat) {

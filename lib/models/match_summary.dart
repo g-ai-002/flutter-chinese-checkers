@@ -129,12 +129,10 @@ class MatchSummary {
   final String? favoriteOpening;
   final int favoriteOpeningCount;
 
-  /// 获胜方平均每枚棋子消耗的步数。
   final double? entryEfficiency;
 
   bool get isEmpty => total == 0;
 
-  /// 人机胜率，平局计入总场次。
   double get winRate => aiGames == 0 ? 0 : wins / aiGames;
 
   int get winPercent => (winRate * 100).round();

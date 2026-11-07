@@ -29,5 +29,11 @@ abstract interface class BoardSource {
   /// 批量跳转与后退返回 [history] 的长度，棋盘直接切到目标局面。
   int get animationStartIndex;
 
+  /// 走子动画开始前的预高亮时长。
+  ///
+  /// 实时对局为 0；复盘逐手播放时留出一小段时间高亮即将移动的棋子，
+  /// 让目光先落到它身上，再启动走子动画。
+  Duration get animationLeadIn;
+
   void tapHole(int hole);
 }

@@ -5,7 +5,6 @@ import '../../theme/player_palette.dart';
 import '../../utils/formatters.dart';
 import 'confirm_dialog.dart';
 
-/// 终局弹窗：显示胜者、步数、用时与本局亮点。
 Future<void> showGameResultDialog(
   BuildContext context, {
   required MatchRecord record,
@@ -113,7 +112,6 @@ class _StatRow extends StatelessWidget {
   }
 }
 
-/// 离开对局前的确认。
 Future<bool> confirmLeaveGame(BuildContext context) {
   return showConfirmDialog(
     context,
@@ -126,10 +124,26 @@ Future<bool> confirmLeaveGame(BuildContext context) {
 
 /// 玩法说明，首页与对局页共用一个弹窗。
 Future<void> showRulesDialog(BuildContext context) {
+  const sections = <(String, String)>[
+    ('目标', '把自己的 10 枚棋子全部走进正对面的营地，先完成的一方获胜。'),
+    (
+      '走法',
+      '单步：走到相邻的空孔。\n'
+          '连跳：跨过任意一枚相邻棋子落到对称的空孔，'
+          '可以连续跳多步，中途可随时停下。',
+    ),
+    (
+      '人数',
+      '支持 2、3、4、6 人对局。人机对战时其余座位由电脑接管，'
+          '电脑会自动完成自己的回合。',
+    ),
+    ('提示与悔棋', '「提示」会给出一手推荐的走法；「悔棋」在人机模式回到自己上一次走棋之前。'),
+    ('落点提示', '白色圆点是单步可落位置，白色双环是连跳可落位置；营地底色的对面即目标。'),
+  ];
   return showDialog<void>(
     context: context,
     builder: (dialogContext) {
-      final theme = Theme.of(dialogContext).textTheme;
+      final text = Theme.of(dialogContext).textTheme;
       return AlertDialog(
         title: const Text('玩法说明'),
         content: SingleChildScrollView(
@@ -137,41 +151,12 @@ Future<void> showRulesDialog(BuildContext context) {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('目标', style: theme.titleSmall),
-              const SizedBox(height: 4),
-              Text('把自己的 10 枚棋子全部走进正对面的营地，先完成的一方获胜。', style: theme.bodyMedium),
-              const SizedBox(height: 14),
-              Text('走法', style: theme.titleSmall),
-              const SizedBox(height: 4),
-              Text(
-                '单步：走到相邻的空孔。\n'
-                '连跳：跨过任意一枚相邻棋子落到对称的空孔，'
-                '可以连续跳多步，中途可随时停下。',
-                style: theme.bodyMedium,
-              ),
-              const SizedBox(height: 14),
-              Text('人数', style: theme.titleSmall),
-              const SizedBox(height: 4),
-              Text(
-                '支持 2、3、4、6 人对局。人机对战时其余座位由电脑接管，'
-                '电脑会自动完成自己的回合。',
-                style: theme.bodyMedium,
-              ),
-              const SizedBox(height: 14),
-              Text('提示与悔棋', style: theme.titleSmall),
-              const SizedBox(height: 4),
-              Text(
-                '「提示」会给出一手推荐的走法；「悔棋」在人机模式回到自己上一次走棋之前。',
-                style: theme.bodyMedium,
-              ),
-              const SizedBox(height: 14),
-              Text('落点提示', style: theme.titleSmall),
-              const SizedBox(height: 4),
-              Text(
-                '白色圆点是单步可落位置，白色双环是连跳可落位置；'
-                '营地底色的对面即目标。',
-                style: theme.bodyMedium,
-              ),
+              for (final (title, body) in sections) ...[
+                Text(title, style: text.titleSmall),
+                const SizedBox(height: 4),
+                Text(body, style: text.bodyMedium),
+                if (title != sections.last.$1) const SizedBox(height: 14),
+              ],
             ],
           ),
         ),

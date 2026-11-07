@@ -7,7 +7,6 @@ import 'package:flutter_soloud/flutter_soloud.dart';
 import 'log_service.dart';
 import 'tone_synth.dart';
 
-/// 交互反馈类型，决定提示音与震动的强弱。
 enum GameSound { select, step, jump, win }
 
 /// 落子、连跳与终局音效，全部在运行时合成，仓库不携带音频文件。

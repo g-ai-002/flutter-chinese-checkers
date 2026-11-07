@@ -1,6 +1,5 @@
 import 'board_geometry.dart';
 
-/// 残局难度分组。
 enum ChallengeTier {
   starter('入门'),
   advanced('进阶'),
@@ -36,7 +35,6 @@ class ChallengeLevel {
   /// 三星步数：按参考解法走即可达成。
   final int parMoves;
 
-  /// 步数上限，超过即挑战失败。
   final int moveLimit;
 
   /// 己方棋子（不含已填满的营地内圈）。
@@ -293,7 +291,6 @@ final List<ChallengeLevel> kChallengeLevels = [
   ),
 ];
 
-/// 按 id 查找关卡；未知 id 返回 null。
 ChallengeLevel? challengeById(String id) {
   for (final level in kChallengeLevels) {
     if (level.id == id) return level;
@@ -305,7 +302,6 @@ ChallengeLevel? challengeById(String id) {
 int challengeIndexOf(ChallengeLevel level) =>
     kChallengeLevels.indexWhere((item) => item.id == level.id);
 
-/// 下一关；已是最后一关时返回 null。
 ChallengeLevel? challengeAfter(ChallengeLevel level) {
   final index = challengeIndexOf(level);
   if (index < 0 || index + 1 >= kChallengeLevels.length) return null;

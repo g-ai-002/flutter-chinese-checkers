@@ -6,7 +6,6 @@ import '../../theme/player_palette.dart';
 import '../../utils/formatters.dart';
 import 'surface_card.dart';
 
-/// 没有对局记录时的空状态。
 class StatsEmptyState extends StatelessWidget {
   const StatsEmptyState({super.key});
 
@@ -171,7 +170,6 @@ class _MetricCard extends StatelessWidget {
   }
 }
 
-/// 人机战绩：胜 / 平 / 负分布条与图例。
 class AiRecordPanel extends StatelessWidget {
   const AiRecordPanel({super.key, required this.summary});
 
@@ -286,7 +284,6 @@ class _RecordLegend extends StatelessWidget {
   }
 }
 
-/// 生涯亮点：最快获胜、最长连跳、常用开局与入营效率。
 class StatsHighlightsPanel extends StatelessWidget {
   const StatsHighlightsPanel({super.key, required this.summary});
 
@@ -393,7 +390,6 @@ class _HighlightRow extends StatelessWidget {
   }
 }
 
-/// 最近对局列表，主界面最多展示八场。
 class RecentMatchesPanel extends StatelessWidget {
   const RecentMatchesPanel({super.key, required this.records});
 

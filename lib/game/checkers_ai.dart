@@ -272,7 +272,6 @@ class CheckersAi {
   }
 }
 
-/// 一次搜索的节点数与深度，用于日志与测试。
 class AiSearchStats {
   const AiSearchStats({
     required this.nodes,

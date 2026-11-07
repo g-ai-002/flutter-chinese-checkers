@@ -26,10 +26,8 @@ class CheckersMove {
 
   int get to => landings.last;
 
-  /// 跳过的孔位数量，单步为 0。
   int get jumpCount => jump ? landings.length : 0;
 
-  /// 完整路径（含起点），绘制与动画使用。
   List<int> get path => [from, ...landings];
 
   /// 每一段的中点即被跳过的棋子，用于跳跃弧线。

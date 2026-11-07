@@ -7,7 +7,6 @@ import '../../utils/move_notation.dart';
 /// 棋谱每行高度：页面滚动定位与列表 itemExtent 共用。
 const double kReplayRowExtent = 62;
 
-/// 当前进度条：手数、走子方、走法与进营数。
 class ReplayBanner extends StatelessWidget {
   const ReplayBanner({super.key, required this.controller});
 
@@ -81,7 +80,6 @@ class ReplayBanner extends StatelessWidget {
   }
 }
 
-/// 复盘操作：拖动进度、前后翻看与自动播放。
 class ReplayControls extends StatelessWidget {
   const ReplayControls({super.key, required this.controller});
 
@@ -147,7 +145,6 @@ class ReplayControls extends StatelessWidget {
   }
 }
 
-/// 棋谱面板：开局加每一手，点击直接跳到该进度。
 class ReplayMoveList extends StatelessWidget {
   const ReplayMoveList({
     super.key,
@@ -219,7 +216,6 @@ class ReplayMoveList extends StatelessWidget {
   }
 }
 
-/// 本局最佳着法：点击直接跳到那一手。
 class _BestMoveBar extends StatelessWidget {
   const _BestMoveBar({required this.controller});
 

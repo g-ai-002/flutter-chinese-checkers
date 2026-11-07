@@ -283,7 +283,6 @@ class ChallengeHud extends StatelessWidget {
   }
 }
 
-/// 玩家进营进度：以纵向小胶囊贴在棋盘一侧。
 class PlayersHud extends StatelessWidget {
   const PlayersHud({
     super.key,
@@ -401,6 +400,9 @@ class _PlayerProgressRow extends StatelessWidget {
 }
 
 /// 操作坞：提示、悔棋、重开（残局为提示、重试）。
+///
+/// 窄屏用 [compact] 收成纯图标按钮，宽度从约 240 降到 130，
+/// 与左下的进度面板并排时不会互相覆盖。
 class ActionDock extends StatelessWidget {
   const ActionDock({
     super.key,
@@ -409,6 +411,7 @@ class ActionDock extends StatelessWidget {
     required this.onUndo,
     required this.onRestart,
     this.showUndo = true,
+    this.compact = false,
   });
 
   final CheckersController controller;
@@ -416,6 +419,7 @@ class ActionDock extends StatelessWidget {
   final VoidCallback onUndo;
   final VoidCallback onRestart;
   final bool showUndo;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -433,20 +437,23 @@ class ActionDock extends StatelessWidget {
             icon: Icons.lightbulb_outline,
             label: '提示',
             onPressed: canHint ? onHint : null,
+            compact: compact,
           ),
           if (showUndo) ...[
-            const SizedBox(width: 2),
+            SizedBox(width: compact ? 4 : 2),
             _DockButton(
               icon: Icons.undo,
               label: '悔棋',
               onPressed: canUndo ? onUndo : null,
+              compact: compact,
             ),
           ],
-          const SizedBox(width: 2),
+          SizedBox(width: compact ? 4 : 2),
           _DockButton(
             icon: Icons.refresh,
             label: showUndo ? '重开' : '重试',
             onPressed: onRestart,
+            compact: compact,
           ),
         ],
       ),
@@ -459,15 +466,38 @@ class _DockButton extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.onPressed,
+    required this.compact,
   });
 
   final IconData icon;
   final String label;
   final VoidCallback? onPressed;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    if (compact) {
+      return IconButton(
+        tooltip: label,
+        onPressed: onPressed,
+        icon: Icon(icon, size: 19),
+        style: IconButton.styleFrom(
+          fixedSize: const Size.square(40),
+          minimumSize: const Size.square(40),
+          padding: EdgeInsets.zero,
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          foregroundColor: scheme.primary,
+          disabledForegroundColor: scheme.onSurfaceVariant.withValues(
+            alpha: 0.4,
+          ),
+          backgroundColor: scheme.primary.withValues(alpha: 0.08),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
+    }
     return TextButton.icon(
       onPressed: onPressed,
       icon: Icon(icon, size: 17),
@@ -540,7 +570,6 @@ Future<void> showChallengeBriefDialog(
   );
 }
 
-/// 矮窗口下的进度浮层，避免纵向列表压到棋盘。
 Future<void> showPlayerProgressDialog(
   BuildContext context,
   CheckersController controller,

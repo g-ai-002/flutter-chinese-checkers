@@ -89,11 +89,14 @@ class CheckersController extends ChangeNotifier implements BoardSource {
   @override
   int get animationStartIndex => 0;
 
+  /// 实时对局走子即是操作反馈，不需要额外的预高亮。
+  @override
+  Duration get animationLeadIn => Duration.zero;
+
   bool get isFinished => winner != null || isDraw;
 
   bool get isHumanTurn => setup.isHuman(currentSeat);
 
-  /// 残局剩余步数；非残局返回 null。
   int? get movesLeft {
     final limit = setup.challenge?.moveLimit;
     if (limit == null) return null;
@@ -123,7 +126,6 @@ class CheckersController extends ChangeNotifier implements BoardSource {
   int progressOf(int seat) =>
       rules.progress(board, seat, setup.targetArmOf(seat));
 
-  /// 选中棋子后可以直接落子的孔位。
   @override
   Map<int, CheckersMove> get targets => Map.unmodifiable(_movesByTarget);
 
@@ -344,7 +346,6 @@ class CheckersController extends ChangeNotifier implements BoardSource {
     _startedAt = null;
   }
 
-  /// 请求一步提示，6 秒后自动收起。
   void requestHint() {
     if (isFinished || !isHumanTurn) return;
     final move = _hintAi.chooseMove(board, currentSeat);

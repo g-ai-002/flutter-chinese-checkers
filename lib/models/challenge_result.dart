@@ -10,7 +10,6 @@ class ChallengeResult {
   final int stars;
   final int moves;
 
-  /// 新成绩是否值得覆盖旧成绩。
   bool beats(ChallengeResult other) =>
       stars > other.stars || (stars == other.stars && moves < other.moves);
 

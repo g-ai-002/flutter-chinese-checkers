@@ -9,7 +9,6 @@ import 'widgets/archive_widgets.dart';
 import 'widgets/confirm_dialog.dart';
 import 'widgets/replay_exchange.dart';
 
-/// 棋谱库：浏览终局自动存档的棋谱，支持导入、导出与删除。
 class ArchivePage extends StatelessWidget {
   const ArchivePage({super.key});
 

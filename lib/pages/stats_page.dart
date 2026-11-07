@@ -5,7 +5,6 @@ import '../providers/settings_provider.dart';
 import 'widgets/confirm_dialog.dart';
 import 'widgets/stats_widgets.dart';
 
-/// 对局统计：生涯概览、人机战绩、亮点与最近对局。
 class StatsPage extends StatelessWidget {
   const StatsPage({super.key});
 

@@ -76,7 +76,6 @@ class MusicService {
     }
   }
 
-  /// 开关键：关闭立即停止，开启时重新播放。
   static Future<void> setEnabled(bool value) async {
     enabled = value;
     final target = sink;

@@ -35,7 +35,6 @@ class _ReplayExportDialog extends StatefulWidget {
 }
 
 class _ReplayExportDialogState extends State<_ReplayExportDialog> {
-  /// 分享码内容较长，只在打开浮层时编码一次，复制与保存复用同一份。
   late final String _shareCode = widget.archive.encode();
   String? _savedPath;
   bool _saving = false;

@@ -106,10 +106,8 @@ class BoardGeometry {
 
   final List<Hole> holes;
 
-  /// 每个孔位的相邻孔位（最多 6 个）。
   final List<List<int>> neighbors;
 
-  /// 六个营地的孔位编号，按行排序。
   final List<List<int>> armHoles;
 
   final Map<int, int> _indexByKey;
@@ -125,7 +123,6 @@ class BoardGeometry {
 
   int oppositeArm(int arm) => (arm + 3) % 6;
 
-  /// 两个孔位之间的六边形距离（立方坐标）。
   int distance(int a, int b) {
     final ha = holes[a];
     final hb = holes[b];

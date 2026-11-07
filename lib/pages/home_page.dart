@@ -121,8 +121,11 @@ class HomePage extends StatelessWidget {
                           onTap: () => _openArchive(context),
                         ),
                         const SizedBox(height: 12),
-                        _StatsCard(
-                          summary: settings.matchSummary,
+                        _ModeCard(
+                          icon: Icons.query_stats,
+                          color: theme.colorScheme.secondary,
+                          title: '对局统计',
+                          subtitle: _summaryHint(settings.matchSummary),
                           onTap: () => _openStats(context),
                         ),
                         const SizedBox(height: 18),
@@ -311,81 +314,16 @@ class _Tag extends StatelessWidget {
   }
 }
 
-class _StatsCard extends StatelessWidget {
-  const _StatsCard({required this.summary, required this.onTap});
-
-  final MatchSummary summary;
-  final VoidCallback onTap;
-
-  String get _subtitle {
-    if (summary.total == 0) return '完成第一局后查看胜率与亮点';
-    final parts = <String>['已下 ${summary.total} 局'];
-    if (summary.aiGames > 0) {
-      parts.add('人机胜率 ${summary.winPercent}%');
-    } else {
-      parts.add('同屏 ${summary.localGames} 局');
-    }
-    if (summary.longestJump > 0) {
-      parts.add('最长连跳 ×${summary.longestJump}');
-    }
-    return parts.join(' · ');
+String _summaryHint(MatchSummary summary) {
+  if (summary.total == 0) return '完成第一局后查看胜率与亮点';
+  final parts = <String>['已下 ${summary.total} 局'];
+  if (summary.aiGames > 0) {
+    parts.add('人机胜率 ${summary.winPercent}%');
+  } else {
+    parts.add('同屏 ${summary.localGames} 局');
   }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final color = theme.colorScheme.secondary;
-    return Material(
-      color: theme.colorScheme.surface,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: theme.colorScheme.outline),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.13),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(Icons.query_stats, color: color, size: 21),
-              ),
-              const SizedBox(width: 13),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('对局统计', style: theme.textTheme.titleSmall),
-                    const SizedBox(height: 2),
-                    Text(
-                      _subtitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(
-                Icons.chevron_right,
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  if (summary.longestJump > 0) parts.add('最长连跳 ×${summary.longestJump}');
+  return parts.join(' · ');
 }
 
 class _ModeCard extends StatelessWidget {

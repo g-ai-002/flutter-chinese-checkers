@@ -58,7 +58,6 @@ class ReplayArchive {
 
   String get outcomeLabel => setup.outcomeLabelFor(winner);
 
-  /// 本局最长连跳的跳数，单步为 0。
   int get longestJump =>
       records.fold(0, (best, record) => math.max(best, record.move.jumpCount));
 
@@ -82,7 +81,6 @@ class ReplayArchive {
     ],
   };
 
-  /// 生成可复制、可粘贴的分享码。
   String encode() => '$codePrefix${jsonEncode(toJson())}';
 
   /// 解析分享码或等价的 JSON 文本，无法识别时返回 null。

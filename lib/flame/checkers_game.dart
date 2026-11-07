@@ -8,7 +8,6 @@ import '../game/replay_controller.dart';
 import '../theme/app_theme.dart';
 import 'board_component.dart';
 
-/// Flame 游戏入口：棋盘组件 + 主题监听。
 class CheckersGame extends FlameGame {
   CheckersGame({
     required this.source,
@@ -37,7 +36,6 @@ class CheckersGame extends FlameGame {
   Listenable? get _listenableSource =>
       source is Listenable ? source as Listenable : null;
 
-  /// 是否因长时间静止而主动暂停了渲染循环。
   bool get isIdlePaused => _idlePaused;
 
   @override

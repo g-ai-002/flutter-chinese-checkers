@@ -78,7 +78,6 @@ class StorageService {
   Future<void> setDifficulty(Difficulty value) =>
       _write((p) => p.setString(AppConstants.prefKeyDifficulty, value.name));
 
-  /// 人类座位（0 起），超出当前人数时回退到 0。
   int humanSeatFor(int players) {
     final seat = _p.getInt(AppConstants.prefKeyHumanSeat) ?? 0;
     return seat >= 0 && seat < players ? seat : 0;
