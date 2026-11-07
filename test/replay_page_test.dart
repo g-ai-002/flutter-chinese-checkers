@@ -111,6 +111,18 @@ void main() {
     await tester.pump(const Duration(milliseconds: 32));
   }
 
+  testWidgets('矮窗口收起顶部进度条，把高度让给棋盘', (tester) async {
+    await pumpReplay(tester, size: const Size(640, 360));
+
+    expect(find.text('对局复盘'), findsOneWidget);
+    expect(find.textContaining('初始营地布局'), findsNothing);
+    final board = tester.getRect(find.byKey(const ValueKey('replay-board')));
+    expect(board.height, greaterThan(190));
+    expect(tester.takeException(), isNull);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
   testWidgets('宽屏复盘页展示棋盘、棋谱与播放控件', (tester) async {
     await pumpReplay(tester);
 

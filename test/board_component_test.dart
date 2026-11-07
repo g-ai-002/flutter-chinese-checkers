@@ -120,6 +120,46 @@ void main() {
     theme.dispose();
   });
 
+  test('复盘逐手前进先高亮起点棋子，实时对局不预高亮', () async {
+    final replay = ReplayController(setup: setup, records: sampleRecords(3));
+    final theme = ValueNotifier<BoardTheme>(kBoardThemes.first);
+    final board = await buildBoard(replay, theme);
+    final from = replay.steps.first.record.move.from;
+
+    replay.next();
+    board.update(0);
+    expect(board.isPreviewing, isTrue);
+    expect(board.previewHole, from);
+    expect(board.isAnimating, isTrue);
+
+    // 预高亮结束后才开始移动棋子。
+    board.update(ReplayController.leadIn.inMilliseconds / 1000 + 0.01);
+    expect(board.isPreviewing, isFalse);
+    expect(board.isAnimating, isTrue);
+
+    board.update(1);
+    expect(board.isAnimating, isFalse);
+    replay.dispose();
+
+    final controller = CheckersController(setup: setup);
+    final live = BoardComponent(
+      source: controller,
+      theme: theme,
+      showHints: false,
+    );
+    await live.onLoad();
+    live.update(0);
+    final move = controller.rules.legalMoves(controller.board, 0).first;
+    controller.applyMove(move);
+    live.update(0);
+    expect(controller.animationLeadIn, Duration.zero);
+    expect(live.isPreviewing, isFalse);
+    expect(live.previewHole, isNull);
+
+    controller.dispose();
+    theme.dispose();
+  });
+
   test('静止帧复用棋子层，局面变化后重新录制', () async {
     final controller = CheckersController(setup: setup);
     final theme = ValueNotifier<BoardTheme>(kBoardThemes.first);

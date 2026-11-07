@@ -235,7 +235,7 @@ void main() {
     await pumpGame(
       tester,
       const GameSetup(mode: PlayMode.local, playerCount: PlayerCount.six),
-      size: const Size(420, 640),
+      size: const Size(320, 568),
     );
 
     expect(find.byTooltip('对局进度'), findsOneWidget);

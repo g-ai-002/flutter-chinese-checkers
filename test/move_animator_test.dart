@@ -56,4 +56,26 @@ void main() {
     expect(animator.isAnimating, isFalse);
     expect(animator.pending, 0);
   });
+
+  test('预高亮阶段停在起点，结束后才开始走子', () {
+    final animator = MoveAnimator()
+      ..enqueue(CheckersMove.step(0, 1), const [1], leadIn: 0.3);
+    final anim = animator.current!;
+
+    expect(anim.previewing, isTrue);
+    expect(anim.progress, 0);
+
+    animator.advance(0.2);
+    expect(anim.previewing, isTrue);
+    expect(anim.progress, 0);
+    expect(animator.isAnimating, isTrue);
+
+    // 0.35 秒：预高亮结束，走子只推进了 0.05 秒。
+    animator.advance(0.15);
+    expect(anim.previewing, isFalse);
+    expect(anim.progress, closeTo(0.05 / 0.16, 1e-9));
+
+    animator.advance(1);
+    expect(animator.isAnimating, isFalse);
+  });
 }
