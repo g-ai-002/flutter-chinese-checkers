@@ -24,6 +24,9 @@ class LogService {
     _initialized = false;
   }
 
+  /// Web 只保留内存日志，无需落盘。
+  static Future<void> flush() async {}
+
   static String get logFilePath => '';
 
   static void info(String message) => _write('INFO', message);

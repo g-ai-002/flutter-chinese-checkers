@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -17,6 +18,16 @@ class LogService {
   bool _initialized = false;
   DateTime Function() _now = DateTime.now;
 
+  /// 待落盘的日志：攒一小批再异步写入，避免每条日志都同步卡住 UI 线程。
+  final StringBuffer _pending = StringBuffer();
+  Timer? _flushTimer;
+  Future<void> _writes = Future<void>.value();
+
+  /// 每写若干行才检查一次文件大小，避免每条日志都做同步 stat。
+  int _rotateCheckCountdown = 128;
+
+  static const Duration _flushDelay = Duration(milliseconds: 250);
+  static const int _maxPendingChars = 32 * 1024;
   static const int _maxBufferLines = 2000;
   static const int _maxEarlyLines = 500;
   static const int _maxFileSize = 5 * 1024 * 1024;
@@ -34,8 +45,17 @@ class LogService {
 
   /// 仅用于测试。
   static void reset() {
+    _instance?._flushSync();
     _instance = null;
     _earlyBuffer.clear();
+  }
+
+  /// 把尚未落盘的日志立即写入文件，应用暂停或退出前调用。
+  static Future<void> flush() async {
+    final inst = _instance;
+    if (inst == null) return;
+    inst._flushAsync();
+    await inst._writes;
   }
 
   Future<void> _init(
@@ -68,6 +88,8 @@ class LogService {
       'INFO',
       '==== LogService 已初始化, 日志文件: ${_logFile?.path ?? '内存模式'} ====',
     );
+    // 启动日志立即落盘，后续日志再走批量异步写入。
+    _flushSync();
   }
 
   static String get logFilePath => _instance?._logFile?.path ?? '';
@@ -100,13 +122,48 @@ class LogService {
     final line = formatLogLine(_now(), level, message);
     _buffer.add(line);
     if (_buffer.length > _maxBufferLines) _buffer.removeAt(0);
-    _appendLine(line);
+    _appendLine(line, immediate: level == 'ERROR');
   }
 
-  void _appendLine(String line) {
+  /// 日志先进入待写缓冲：普通日志每 250 毫秒批量异步落盘，
+  /// 错误日志立即同步写入，保证崩溃前最后一条错误一定在文件里。
+  void _appendLine(String line, {bool immediate = false}) {
+    _pending.write('$line\n');
+    _refreshLogFile();
+    if (immediate) {
+      _flushSync();
+      return;
+    }
+    if (_pending.length >= _maxPendingChars) {
+      _flushAsync();
+      return;
+    }
+    _flushTimer ??= Timer(_flushDelay, _flushAsync);
+  }
+
+  void _flushAsync() {
+    _flushTimer?.cancel();
+    _flushTimer = null;
+    if (_pending.isEmpty) return;
+    final text = _pending.toString();
+    _pending.clear();
+    final file = _logFile;
+    if (file == null) return;
+    _writes = _writes.then((_) async {
+      try {
+        await file.writeAsString(text, mode: FileMode.append);
+      } catch (_) {}
+    });
+  }
+
+  void _flushSync() {
+    _flushTimer?.cancel();
+    _flushTimer = null;
+    if (_pending.isEmpty) return;
+    final text = _pending.toString();
+    _pending.clear();
     try {
-      _refreshLogFile();
-      _logFile?.writeAsStringSync('$line\n', mode: FileMode.append);
+      _logFile?.writeAsStringSync(text, mode: FileMode.append);
     } catch (_) {}
   }
 
@@ -121,6 +178,8 @@ class LogService {
         current.month != now.month ||
         current.day != now.day;
     if (needSwitch) {
+      // 切到新的一天之前，把待写内容留给旧文件。
+      _flushSync();
       final file = _openTodayFile();
       if (file != null) {
         _logFile = file;
@@ -147,11 +206,16 @@ class LogService {
     }
   }
 
+  /// 每写若干行才检查一次文件大小，避免每条日志都做同步 stat。
   void _rotateIfNeeded() {
     final file = _logFile;
     if (file == null) return;
+    if (--_rotateCheckCountdown > 0) return;
+    _rotateCheckCountdown = 128;
     try {
       if (!file.existsSync() || file.lengthSync() < _maxFileSize) return;
+      // 备份旧文件之前先把待写内容落盘，保证日志顺序。
+      _flushSync();
       final originalPath = file.path;
       final parent = file.parent;
       final baseName = file.uri.pathSegments.last.replaceAll('.log', '');
