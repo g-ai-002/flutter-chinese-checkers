@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -5,7 +7,9 @@ import 'package:provider/provider.dart';
 
 import 'pages/home_page.dart';
 import 'providers/settings_provider.dart';
+import 'services/log_service.dart';
 import 'services/music_service.dart';
+import 'services/sound_service.dart';
 import 'services/storage_service.dart';
 import 'theme/app_theme.dart';
 import 'utils/constants.dart';
@@ -24,6 +28,15 @@ class _TiaoqiAppState extends State<TiaoqiApp> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // 首帧之后才启动音频：音频引擎初始化与音乐合成不再与启动争抢主线程。
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(
+        SoundService.init().then((_) async {
+          if (MusicService.enabled && !kIsWeb) await MusicService.start();
+        }),
+      );
+    });
   }
 
   @override
@@ -41,9 +54,12 @@ class _TiaoqiAppState extends State<TiaoqiApp> with WidgetsBindingObserver {
       case AppLifecycleState.paused:
       case AppLifecycleState.hidden:
         MusicService.pauseForLifecycle();
+        unawaited(LogService.flush());
+        break;
+      case AppLifecycleState.detached:
+        unawaited(LogService.flush());
         break;
       case AppLifecycleState.inactive:
-      case AppLifecycleState.detached:
         break;
     }
   }

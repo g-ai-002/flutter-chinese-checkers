@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:chinese_checkers/services/music_service.dart';
+import 'package:chinese_checkers/services/music_synth.dart';
 import 'package:chinese_checkers/services/tone_synth.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -19,6 +20,11 @@ void main() {
       kMusicLoopSeconds * kMusicSampleRate * 2,
     );
     expect(clip.length, 44 + kMusicLoopSeconds * kMusicSampleRate * 2);
+  });
+
+  test('后台合成与直接合成的音乐一致', () async {
+    final background = await synthesizeMusicInBackground();
+    expect(background, synthesizeMusicWav());
   });
 
   test('开关背景音乐只触发一次状态切换', () async {
