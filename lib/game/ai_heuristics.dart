@@ -46,6 +46,14 @@ class AiHeuristics {
   final List<int> _slotWeights;
   final Map<int, List<int>> _distanceCache = {};
 
+  /// 估值期间复用的临时容器：搜索每步会评估上千次，避免反复分配列表。
+  late final List<List<int>> _groups = List.generate(
+    setup.players,
+    (_) => <int>[],
+  );
+  final List<int> _outside = [];
+  final List<int> _slots = [];
+
   int targetOf(int seat) => _targets[seat];
 
   int armOf(int hole) => _arms[hole];
@@ -63,13 +71,17 @@ class AiHeuristics {
   }
 
   /// 一次遍历把棋子按座位分组，避免每位对手都重扫整块棋盘。
+  ///
+  /// 分组列表在实例内复用，下一轮估值直接清空重填。
   List<List<int>> _piecesBySeat(CheckersBoard board) {
-    final pieces = List.generate(setup.players, (_) => <int>[]);
+    for (final group in _groups) {
+      group.clear();
+    }
     for (var hole = 0; hole < board.length; hole++) {
       final owner = board.at(hole);
-      if (owner >= 0 && owner < setup.players) pieces[owner].add(hole);
+      if (owner >= 0 && owner < setup.players) _groups[owner].add(hole);
     }
-    return pieces;
+    return _groups;
   }
 
   double _ownScore(
@@ -80,14 +92,14 @@ class AiHeuristics {
   ) {
     final distances = _distances(target);
     var score = 0.0;
-    final outside = <int>[];
+    _outside.clear();
 
     for (final hole in pieces) {
       if (_arms[hole] == target) {
         score += _ownInTarget;
         continue;
       }
-      outside.add(hole);
+      _outside.add(hole);
       final near = _farDistance - distances[hole];
       score += near * _ownAdvance;
       // 已经贴着营地，再在营外兜圈就浪费了临门机会。
@@ -95,9 +107,9 @@ class AiHeuristics {
       if (near >= _nearTargetDistance) score += _nearTargetBonus;
     }
 
-    final slots = _openSlots(board, target, seat);
-    if (slots.isNotEmpty && outside.isNotEmpty) {
-      score -= _fillCost(outside, slots, ordered: true);
+    _openSlots(board, target, seat);
+    if (_slots.isNotEmpty && _outside.isNotEmpty) {
+      score -= _fillCost(_outside, _slots, ordered: true);
     }
     return score;
   }
@@ -111,31 +123,33 @@ class AiHeuristics {
     final distances = _distances(target);
     var score = 0.0;
     var held = 0;
-    final outside = <int>[];
+    _outside.clear();
 
     for (final hole in pieces) {
       if (_arms[hole] == target) {
         held++;
         continue;
       }
-      outside.add(hole);
+      _outside.add(hole);
       score -= (_farDistance - distances[hole]) * _opponentAdvance;
     }
     score -= held * _opponentInTarget;
 
-    final slots = _openSlots(board, target, other);
-    if (slots.isNotEmpty && outside.isNotEmpty) {
+    _openSlots(board, target, other);
+    if (_slots.isNotEmpty && _outside.isNotEmpty) {
       // 填满目标营地所需距离越短，对手越接近收官。
-      score -= _opponentFillPressure / (1 + _fillCost(outside, slots));
+      score -= _opponentFillPressure / (1 + _fillCost(_outside, _slots));
     }
     return score;
   }
 
-  /// 目标营地中尚未被 [seat] 占据的孔位。
-  List<int> _openSlots(CheckersBoard board, int arm, int seat) => [
-    for (final hole in geometry.armHoles[arm])
-      if (board.at(hole) != seat) hole,
-  ];
+  /// 把目标营地中尚未被 [seat] 占据的孔位写入复用的 [_slots]。
+  void _openSlots(CheckersBoard board, int arm, int seat) {
+    _slots.clear();
+    for (final hole in geometry.armHoles[arm]) {
+      if (board.at(hole) != seat) _slots.add(hole);
+    }
+  }
 
   /// 估算把 [pieces] 填进 [slots] 的代价：每个空位取最近的一枚棋子。
   ///

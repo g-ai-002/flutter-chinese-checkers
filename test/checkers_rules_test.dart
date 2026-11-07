@@ -165,4 +165,38 @@ void main() {
     expect(rules.nextSeat(board, 1, 3), 0);
     expect(rules.nextSeat(empty(), 0, 4), -1);
   });
+
+  test('hasAnyMove 与整盘着法生成结果一致', () {
+    final boards = <CheckersBoard>[
+      CheckersBoard.initial(geometry, const [0, 3]),
+      CheckersBoard.initial(geometry, const [0, 1, 2, 3, 4, 5]),
+      boardWith({
+        [0, 0]: 0,
+        [0, 1]: 1,
+        [1, 0]: 0,
+        [-1, 1]: 1,
+      }),
+      empty(),
+    ];
+    // 再补一个真实中局，覆盖棋子互相封堵的情形。
+    final midgame = CheckersBoard.initial(geometry, const [0, 3]);
+    var seat = 0;
+    for (var i = 0; i < 30; i++) {
+      final moves = rules.legalMoves(midgame, seat);
+      if (moves.isEmpty) break;
+      midgame.move(moves.first.from, moves.first.to);
+      seat = (seat + 1) % 2;
+    }
+    boards.add(midgame);
+
+    for (final board in boards) {
+      for (var seat = 0; seat < 6; seat++) {
+        expect(
+          rules.hasAnyMove(board, seat),
+          rules.legalMoves(board, seat).isNotEmpty,
+          reason: '座位 $seat 的快速判定应与完整着法一致',
+        );
+      }
+    }
+  });
 }

@@ -68,6 +68,8 @@ class CheckersAi {
   }
 
   /// 一步进营即可获胜的着法；没有则返回 null。
+  ///
+  /// 直接在传入局面上落子再回退，避免为每个候选复制整块棋盘。
   CheckersMove? _winningMove(
     CheckersBoard board,
     int seat,
@@ -76,8 +78,10 @@ class CheckersAi {
     final target = _heuristics.targetOf(seat);
     for (final move in moves) {
       if (_heuristics.armOf(move.to) != target) continue;
-      final after = board.copy()..move(move.from, move.to);
-      if (rules.hasWon(after, seat, target)) return move;
+      board.move(move.from, move.to);
+      final won = rules.hasWon(board, seat, target);
+      board.move(move.to, move.from);
+      if (won) return move;
     }
     return null;
   }
@@ -91,16 +95,22 @@ class CheckersAi {
 
     for (final candidate in roots) {
       if (!budget.trySpend()) break;
-      final after = board.copy()..move(candidate.move.from, candidate.move.to);
-      final next = rules.nextSeat(after, seat, setup.players);
-      final value = _searchValue(
-        after,
-        seat,
-        next,
-        1,
-        budget,
-        _SearchWindow(bestValue, double.infinity),
-      );
+      final move = candidate.move;
+      board.move(move.from, move.to);
+      final double value;
+      try {
+        final next = rules.nextSeat(board, seat, setup.players);
+        value = _searchValue(
+          board,
+          seat,
+          next,
+          1,
+          budget,
+          _SearchWindow(bestValue, double.infinity),
+        );
+      } finally {
+        board.move(move.to, move.from);
+      }
       if (value > bestValue) {
         bestValue = value;
         best = candidate;
@@ -184,19 +194,24 @@ class CheckersAi {
       var alpha = window.alpha;
       for (final candidate in candidates) {
         if (!budget.trySpend()) break;
-        final after = board.copy()
-          ..move(candidate.move.from, candidate.move.to);
-        if (rules.hasWon(after, current, _heuristics.targetOf(current))) {
-          return AiHeuristics.winScore;
+        final move = candidate.move;
+        final double value;
+        board.move(move.from, move.to);
+        try {
+          if (rules.hasWon(board, current, _heuristics.targetOf(current))) {
+            return AiHeuristics.winScore;
+          }
+          value = _searchValue(
+            board,
+            seat,
+            rules.nextSeat(board, current, setup.players),
+            ply + 1,
+            budget,
+            _SearchWindow(alpha, window.beta),
+          );
+        } finally {
+          board.move(move.to, move.from);
         }
-        final value = _searchValue(
-          after,
-          seat,
-          rules.nextSeat(after, current, setup.players),
-          ply + 1,
-          budget,
-          _SearchWindow(alpha, window.beta),
-        );
         if (value > best) best = value;
         if (best > alpha) alpha = best;
         if (alpha >= window.beta) break;
@@ -208,18 +223,24 @@ class CheckersAi {
     var beta = window.beta;
     for (final candidate in candidates) {
       if (!budget.trySpend()) break;
-      final after = board.copy()..move(candidate.move.from, candidate.move.to);
-      if (rules.hasWon(after, current, _heuristics.targetOf(current))) {
-        return -AiHeuristics.winScore;
+      final move = candidate.move;
+      final double value;
+      board.move(move.from, move.to);
+      try {
+        if (rules.hasWon(board, current, _heuristics.targetOf(current))) {
+          return -AiHeuristics.winScore;
+        }
+        value = _searchValue(
+          board,
+          seat,
+          rules.nextSeat(board, current, setup.players),
+          ply + 1,
+          budget,
+          _SearchWindow(window.alpha, beta),
+        );
+      } finally {
+        board.move(move.to, move.from);
       }
-      final value = _searchValue(
-        after,
-        seat,
-        rules.nextSeat(after, current, setup.players),
-        ply + 1,
-        budget,
-        _SearchWindow(window.alpha, beta),
-      );
       if (value < best) best = value;
       if (best < beta) beta = best;
       if (window.alpha >= beta) break;
@@ -231,21 +252,23 @@ class CheckersAi {
   int get _depth => setup.players <= 4 ? 3 : 2;
 
   /// 按指定座位评估落子后的局面，并按评分降序排列。
+  ///
+  /// 评分时在同一个局面上落子再回退，搜索期间不再复制棋盘；
+  /// 调用结束后 [board] 与传入时完全一致。
   List<_RatedMove> _rate(
     CheckersBoard board,
     List<CheckersMove> moves,
     int seat,
   ) {
-    return [
-      for (final move in moves)
-        _RatedMove(move, _valueAfter(board, move, seat)),
-    ]..sort((a, b) => b.value.compareTo(a.value));
-  }
-
-  /// 落子后的静态估值；落点本身已体现连跳收益，不额外加分。
-  double _valueAfter(CheckersBoard board, CheckersMove move, int seat) {
-    final copy = board.copy()..move(move.from, move.to);
-    return _heuristics.evaluate(copy, seat);
+    final rated = <_RatedMove>[];
+    for (final move in moves) {
+      board.move(move.from, move.to);
+      final value = _heuristics.evaluate(board, seat);
+      board.move(move.to, move.from);
+      rated.add(_RatedMove(move, value));
+    }
+    rated.sort((a, b) => b.value.compareTo(a.value));
+    return rated;
   }
 }
 
