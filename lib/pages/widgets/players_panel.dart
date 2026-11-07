@@ -302,12 +302,16 @@ class GameActionBar extends StatelessWidget {
     required this.onHint,
     required this.onUndo,
     required this.onRestart,
+    this.showUndo = true,
   });
 
   final CheckersController controller;
   final VoidCallback onHint;
   final VoidCallback onUndo;
   final VoidCallback onRestart;
+
+  /// 残局禁用悔棋，直接隐藏按钮而不是留一个不可点的占位。
+  final bool showUndo;
 
   @override
   Widget build(BuildContext context) {
@@ -325,20 +329,22 @@ class GameActionBar extends StatelessWidget {
             label: const Text('提示'),
           ),
         ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: canUndo ? onUndo : null,
-            icon: const Icon(Icons.undo, size: 19),
-            label: const Text('悔棋'),
+        if (showUndo) ...[
+          const SizedBox(width: 10),
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: canUndo ? onUndo : null,
+              icon: const Icon(Icons.undo, size: 19),
+              label: const Text('悔棋'),
+            ),
           ),
-        ),
+        ],
         const SizedBox(width: 10),
         Expanded(
           child: OutlinedButton.icon(
             onPressed: onRestart,
             icon: const Icon(Icons.refresh, size: 19),
-            label: const Text('重开'),
+            label: Text(showUndo ? '重开' : '重试'),
           ),
         ),
       ],

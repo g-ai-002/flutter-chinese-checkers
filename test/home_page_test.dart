@@ -126,4 +126,18 @@ void main() {
 
     expect(find.text('2 人 · 同屏对战'), findsOneWidget);
   });
+
+  testWidgets('首页残局挑战入口展示关卡数并可直接打开', (tester) async {
+    final settings = await boot();
+    await tester.pumpWidget(wrap(settings));
+
+    expect(find.text('残局挑战'), findsOneWidget);
+    expect(find.text('9 道残局 · 限步通关 · 逐关解锁'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('残局挑战'));
+    await tester.tap(find.text('残局挑战'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('已通关 0/9'), findsOneWidget);
+  });
 }

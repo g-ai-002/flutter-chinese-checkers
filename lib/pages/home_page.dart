@@ -8,6 +8,7 @@ import '../models/match_summary.dart';
 import '../providers/settings_provider.dart';
 import '../utils/constants.dart';
 import 'archive_page.dart';
+import 'challenge_page.dart';
 import 'game_page.dart';
 import 'settings_page.dart';
 import 'stats_page.dart';
@@ -97,6 +98,19 @@ class HomePage extends StatelessWidget {
                         ),
                         const SizedBox(height: 12),
                         _ModeCard(
+                          icon: Icons.flag_outlined,
+                          color: theme.colorScheme.secondary,
+                          title: '残局挑战',
+                          subtitle: settings.challengeCompleted == 0
+                              ? '${settings.maxChallengeStars ~/ 3} 道残局 · '
+                                    '限步通关 · 逐关解锁'
+                              : '已通关 ${settings.challengeCompleted}/'
+                                    '${settings.maxChallengeStars ~/ 3} · '
+                                    '${settings.challengeStars} 星',
+                          onTap: () => _openChallenge(context),
+                        ),
+                        const SizedBox(height: 12),
+                        _ModeCard(
                           icon: Icons.collections_bookmark_outlined,
                           color: theme.colorScheme.secondary,
                           title: '棋谱库',
@@ -180,6 +194,11 @@ class HomePage extends StatelessWidget {
   void _openArchive(BuildContext context) {
     Navigator.of(context)
         .push(MaterialPageRoute<void>(builder: (_) => const ArchivePage()));
+  }
+
+  void _openChallenge(BuildContext context) {
+    Navigator.of(context)
+        .push(MaterialPageRoute<void>(builder: (_) => const ChallengePage()));
   }
 }
 

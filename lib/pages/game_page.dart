@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../flame/checkers_game.dart';
+import '../game/challenge_levels.dart';
 import '../game/checkers_controller.dart';
+import '../models/challenge_result.dart';
 import '../models/game_models.dart';
 import '../models/match_record.dart';
 import '../models/replay_archive.dart';
@@ -14,6 +16,7 @@ import '../services/sound_service.dart';
 import '../utils/constants.dart';
 import 'replay_page.dart';
 import 'widgets/board_stage.dart';
+import 'widgets/challenge_widgets.dart';
 import 'widgets/confirm_dialog.dart';
 import 'widgets/game_dialogs.dart';
 import 'widgets/players_panel.dart';
@@ -38,7 +41,10 @@ class _GamePageState extends State<GamePage> {
   void initState() {
     super.initState();
     final settings = context.read<SettingsProvider>();
-    _controller = CheckersController(setup: widget.setup);
+    _controller = CheckersController(
+      setup: widget.setup,
+      allowUndo: !widget.setup.isChallenge,
+    );
     _game = CheckersGame(
       source: _controller,
       theme: settings.boardTheme,
@@ -77,7 +83,7 @@ class _GamePageState extends State<GamePage> {
     if (_controller.isFinished) {
       if (_resultShown) return;
       _resultShown = true;
-      SoundService.play(GameSound.win);
+      if (_controller.winner != null) SoundService.play(GameSound.win);
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _showResult();
       });
@@ -106,6 +112,11 @@ class _GamePageState extends State<GamePage> {
   );
 
   void _showResult() {
+    final challenge = widget.setup.challenge;
+    if (challenge != null) {
+      _showChallengeResult(challenge);
+      return;
+    }
     final settings = context.read<SettingsProvider>();
     final record = MatchRecord.fromGame(
       setup: widget.setup,
@@ -140,8 +151,49 @@ class _GamePageState extends State<GamePage> {
     );
   }
 
+  /// 残局结算：成功后保存最佳成绩并解锁下一关。
+  void _showChallengeResult(ChallengeLevel challenge) {
+    final settings = context.read<SettingsProvider>();
+    final success = _controller.winner != null;
+    final moves = _controller.history.length;
+    final stars = success ? challenge.starsFor(moves) : 0;
+    if (success) {
+      unawaited(
+        settings.saveChallengeResult(
+          ChallengeResult(levelId: challenge.id, stars: stars, moves: moves),
+        ),
+      );
+      LogService.info(
+        '残局通关: ${challenge.id}, $moves 步, $stars 星',
+      );
+    } else {
+      LogService.info('残局失败: ${challenge.id}, 预算 ${challenge.moveLimit} 步');
+    }
+    final next = success ? challengeAfter(challenge) : null;
+    showChallengeResultDialog(
+      context,
+      level: challenge,
+      success: success,
+      moves: moves,
+      onBack: () => Navigator.of(context).pop(),
+      onRetry: () {
+        _controller.restart();
+        _seenMoves = 0;
+      },
+      onNext: next == null ? null : () => _openLevel(next),
+    );
+  }
+
+  void _openLevel(ChallengeLevel level) {
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute<void>(
+        builder: (_) => GamePage(setup: GameSetup.forChallenge(level)),
+      ),
+    );
+  }
+
   Future<void> _requestRestart() async {
-    if (_controller.isFinished) {
+    if (widget.setup.isChallenge || _controller.isFinished) {
       _controller.restart();
       _seenMoves = 0;
       return;
@@ -193,16 +245,20 @@ class _GamePageState extends State<GamePage> {
             icon: const Icon(Icons.arrow_back),
           ),
           title: Text(
-            '${widget.setup.playerCount.label} · ${widget.setup.mode.label}',
+            widget.setup.challenge == null
+                ? '${widget.setup.playerCount.label} · ${widget.setup.mode.label}'
+                : '第 ${challengeIndexOf(widget.setup.challenge!) + 1} 关 · '
+                      '${widget.setup.challenge!.name}',
           ),
           actions: [
-            _watch(
-              () => IconButton(
-                tooltip: _controller.isFinished ? '复盘' : '复盘（终局后可查看）',
-                onPressed: _controller.isFinished ? _openReplay : null,
-                icon: const Icon(Icons.history, size: 21),
+            if (widget.setup.challenge == null)
+              _watch(
+                () => IconButton(
+                  tooltip: _controller.isFinished ? '复盘' : '复盘（终局后可查看）',
+                  onPressed: _controller.isFinished ? _openReplay : null,
+                  icon: const Icon(Icons.history, size: 21),
+                ),
               ),
-            ),
             IconButton(
               tooltip: '玩法说明',
               onPressed: () => showRulesDialog(context),
@@ -225,6 +281,7 @@ class _GamePageState extends State<GamePage> {
   }
 
   Widget _buildWide(ThemeData theme) {
+    final challenge = widget.setup.challenge;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
       child: Row(
@@ -233,7 +290,15 @@ class _GamePageState extends State<GamePage> {
           Expanded(
             child: Column(
               children: [
-                _watch(() => TurnBanner(controller: _controller)),
+                if (challenge == null)
+                  _watch(() => TurnBanner(controller: _controller))
+                else
+                  _watch(
+                    () => ChallengeStatusBar(
+                      controller: _controller,
+                      level: challenge,
+                    ),
+                  ),
                 const SizedBox(height: 10),
                 Expanded(
                   child: BoardStage(
@@ -248,6 +313,7 @@ class _GamePageState extends State<GamePage> {
                     onHint: _controller.requestHint,
                     onUndo: _controller.undo,
                     onRestart: _requestRestart,
+                    showUndo: challenge == null,
                   ),
                 ),
               ],
@@ -260,11 +326,22 @@ class _GamePageState extends State<GamePage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: 4),
-                Text('对局进度', style: theme.textTheme.titleSmall),
-                const SizedBox(height: 10),
-                _watch(
-                  () => PlayerStandings(controller: _controller, vertical: true),
+                Text(
+                  challenge == null ? '对局进度' : '关卡目标',
+                  style: theme.textTheme.titleSmall,
                 ),
+                const SizedBox(height: 10),
+                if (challenge == null)
+                  _watch(
+                    () => PlayerStandings(
+                      controller: _controller,
+                      vertical: true,
+                    ),
+                  )
+                else
+                  _watch(
+                    () => _ChallengeBrief(level: challenge),
+                  ),
                 const Spacer(),
                 _Legend(theme: theme),
               ],
@@ -276,17 +353,27 @@ class _GamePageState extends State<GamePage> {
   }
 
   Widget _buildCompact() {
+    final challenge = widget.setup.challenge;
     return Column(
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
-          child: _watch(() => TurnBanner(controller: _controller)),
+          child: challenge == null
+              ? _watch(() => TurnBanner(controller: _controller))
+              : _watch(
+                  () => ChallengeStatusBar(
+                    controller: _controller,
+                    level: challenge,
+                  ),
+                ),
         ),
-        const SizedBox(height: 8),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: _watch(() => PlayerStandings(controller: _controller)),
-        ),
+        if (challenge == null) ...[
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: _watch(() => PlayerStandings(controller: _controller)),
+          ),
+        ],
         const SizedBox(height: 4),
         Expanded(
           child: Padding(
@@ -302,10 +389,56 @@ class _GamePageState extends State<GamePage> {
               onHint: _controller.requestHint,
               onUndo: _controller.undo,
               onRestart: _requestRestart,
+              showUndo: challenge == null,
             ),
           ),
         ),
       ],
+    );
+  }
+}
+
+/// 宽屏残局的关卡说明：参考步数、星级门槛与障碍提示。
+class _ChallengeBrief extends StatelessWidget {
+  const _ChallengeBrief({required this.level});
+
+  final ChallengeLevel level;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final style = theme.textTheme.bodySmall?.copyWith(
+      color: theme.colorScheme.onSurfaceVariant,
+      height: 1.6,
+    );
+    return SurfaceCard(
+      title: '把 10 枚棋子送进上方营地',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(level.hint, style: style),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              const Icon(
+                Icons.star_rounded,
+                size: 18,
+                color: Color(0xFFE0A526),
+              ),
+              const SizedBox(width: 5),
+              Expanded(
+                child: Text(
+                  '三星 ≤ ${level.parMoves} 步 · '
+                  '两星 ≤ ${level.parMoves + 2} 步',
+                  style: style,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text('障碍子可跨越，不会移动。', style: style),
+        ],
+      ),
     );
   }
 }
