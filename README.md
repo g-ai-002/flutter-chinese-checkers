@@ -21,6 +21,7 @@
 - 🏁 进营进度：每位玩家的实时进度条与 0/10 计数，终局弹窗展示步数、用时、最长连跳与入营效率
 - ✨ Flame 棋盘：立体星形底板、木纹孔位、高光棋子、跳跃弧线与落点高亮
 - ⚡ 流畅度：空闲时暂停棋盘渲染循环，棋子层整层缓存，电脑搜索零拷贝，长时间挂机也稳定
+- ⚙️ 逻辑更新速率：30 / 60 / 120 Hz 三档可选，默认 60 Hz；渲染仍跟随屏幕刷新，低端设备可省电、高刷屏更顺滑
 - 🎬 动画队列：连续落子按顺序播放，长连跳不会被电脑回棋截断
 - 🔄 视角自适应：人机对战把自己的营地转到下方，前进方向朝上
 - 🎨 三套棋盘配色：竹影、暖木、夜墨，深浅色主题同步切换
@@ -34,13 +35,13 @@
 
 ## 下载
 
-v0.6.2（最新）：[Gitea Release](http://192.168.31.120:3020/GTech/flutter-chinese-checkers/releases/tag/v0.6.2)
+v0.6.3（最新）：[Gitea Release](http://192.168.31.120:3020/GTech/flutter-chinese-checkers/releases/tag/v0.6.3)
 
 | 平台 | 产物 |
 | --- | --- |
-| Android (arm64) | `flutter-chinese-checkers-0.6.2-android-aarch64.apk` |
-| Windows (x64, Win10+) | `flutter-chinese-checkers-0.6.2-windows-x86_64.zip` |
-| Web | `flutter-chinese-checkers-0.6.2-web.zip`（解压后起静态服务器） |
+| Android (arm64) | `flutter-chinese-checkers-0.6.3-android-aarch64.apk` |
+| Windows (x64, Win10+) | `flutter-chinese-checkers-0.6.3-windows-x86_64.zip` |
+| Web | `flutter-chinese-checkers-0.6.3-web.zip`（解压后起静态服务器） |
 
 ## 规则
 
@@ -86,8 +87,8 @@ lib/
 
 | 版本 | 说明 |
 | --- | --- |
+| v0.6.3 | 逻辑更新速率 30 / 60 / 120 Hz 可选，默认 60 Hz；固定步长推进，卡顿帧最多补 8 步 |
 | v0.6.2 | 游戏界面显示优化：浮层按设备形态放上下带 / 左右侧栏 / 四角，不遮挡棋子；复盘走子前预高亮 |
 | v0.6.1 | 对局主界面空间优化：棋盘铺满可用区域，轮次 / 进度 / 操作改为四角悬浮且不推动布局 |
 | v0.6.0 | 新增残局挑战：9 道分档关卡、障碍棋子、限步通关、三星评级与逐关解锁 |
 | v0.5.3 | 性能与流畅度优化：空闲停帧、棋子层缓存、搜索零拷贝、启动并行化与日志异步落盘 |
-| v0.5.2 | 复盘逐手回看与自动播放保留走子动画，批量跳转直接切换局面 |
