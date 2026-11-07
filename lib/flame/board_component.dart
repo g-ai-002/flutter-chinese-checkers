@@ -87,18 +87,13 @@ class BoardComponent extends PositionComponent with TapCallbacks {
     _animator.advance(dt);
   }
 
-  /// 把棋盘源新增的着法逐手补进动画队列，每手保存走完后的局面快照。
+  /// 把棋盘源新增的着法补进动画队列，每手保存走完后的局面快照。
   ///
-  /// 复盘直接切换局面，不做补播，避免拖动进度条时累积一长串动画。
+  /// 只有 [BoardSource.animationStartIndex] 之后的新增着法才播放动画：
+  /// 复盘逐手前进只播最后一手，拖动进度条或批量跳转则直接切换局面。
+  /// 历史变短（复盘后退）时整体重建镜像并清空队列。
   void _syncHistory() {
     final records = source.history;
-    if (!source.supportsMoveAnimation) {
-      if (records.length == _seenHistory) return;
-      _seenHistory = records.length;
-      _mirror = source.board.copy();
-      _animator.clear();
-      return;
-    }
     if (records.length < _seenHistory) {
       _seenHistory = records.length;
       _mirror = source.board.copy();
@@ -106,10 +101,15 @@ class BoardComponent extends PositionComponent with TapCallbacks {
       return;
     }
     if (records.length == _seenHistory) return;
+    final animateFrom = source.animationStartIndex.clamp(0, records.length);
+    if (animateFrom > _seenHistory) {
+      // 跨越了多手：丢掉进行中的动画，直接切到目标局面。
+      _animator.clear();
+    }
     for (var i = _seenHistory; i < records.length; i++) {
       final move = records[i].move;
       _mirror.move(move.from, move.to);
-      _animator.enqueue(move, _mirror.cells);
+      if (i >= animateFrom) _animator.enqueue(move, _mirror.cells);
     }
     _seenHistory = records.length;
   }
@@ -549,4 +549,12 @@ class BoardComponent extends PositionComponent with TapCallbacks {
 
   @visibleForTesting
   double get boardScale => _scale;
+
+  /// 当前是否有待播放的走子动画。
+  @visibleForTesting
+  bool get isAnimating => _animator.isAnimating;
+
+  /// 待播放的动画数量。
+  @visibleForTesting
+  int get pendingAnimations => _animator.pending;
 }

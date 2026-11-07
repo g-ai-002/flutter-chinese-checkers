@@ -23,8 +23,11 @@ abstract interface class BoardSource {
 
   CheckersMove? get hintMove;
 
-  /// 是否把新增着法排进动画队列；复盘直接切换局面，不需要补播。
-  bool get supportsMoveAnimation;
+  /// 新增着法从 [history] 的哪个序号开始补播动画。
+  ///
+  /// 实时对局返回 0，新增着法依次播放；复盘逐手前进时只播放最后一手，
+  /// 批量跳转与后退返回 [history] 的长度，棋盘直接切到目标局面。
+  int get animationStartIndex;
 
   void tapHole(int hole);
 }

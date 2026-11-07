@@ -75,13 +75,14 @@ class ReplayController extends ChangeNotifier implements BoardSource {
   int _index = 0;
   bool _playing = false;
   int _epoch = 0;
+  int _animationStart = 0;
   bool _disposed = false;
 
   @override
   int get players => setup.players;
 
   @override
-  bool get supportsMoveAnimation => false;
+  int get animationStartIndex => _animationStart;
 
   @override
   int? get selectedHole => null;
@@ -154,21 +155,25 @@ class ReplayController extends ChangeNotifier implements BoardSource {
     }
   }
 
-  /// 跳到第 [target] 手之后（0 表示开局）。手动跳转会暂停自动播放。
-  void seekTo(int target) {
+  /// 跳到第 [target] 手之后（0 表示开局）。手动跳转会暂停自动播放，
+  /// 拖动进度条或直接跳转直接切换局面，不播放动画。
+  void seekTo(int target) => _jumpTo(target);
+
+  /// 向前一手：保留这一手的走子动画。
+  void next() => _jumpTo(_index + 1, animate: true);
+
+  void previous() => _jumpTo(_index - 1);
+
+  void toStart() => _jumpTo(0);
+
+  void toEnd() => _jumpTo(total);
+
+  void _jumpTo(int target, {bool animate = false}) {
     final wasPlaying = _playing;
     _stopPlayback();
-    final moved = _seek(target.clamp(0, total));
+    final moved = _seek(target.clamp(0, total), animate: animate);
     if (moved || wasPlaying) notifyListeners();
   }
-
-  void next() => seekTo(_index + 1);
-
-  void previous() => seekTo(_index - 1);
-
-  void toStart() => seekTo(0);
-
-  void toEnd() => seekTo(total);
 
   /// 从当前进度自动播放；已经在终点时从头开始。
   void play() {
@@ -196,7 +201,7 @@ class ReplayController extends ChangeNotifier implements BoardSource {
         notifyListeners();
         return;
       }
-      _seek(_index + 1);
+      _seek(_index + 1, animate: true);
       notifyListeners();
       _scheduleTick();
     });
@@ -211,9 +216,12 @@ class ReplayController extends ChangeNotifier implements BoardSource {
   /// 重建到第 [target] 手。向前只补走增量，向后才从开局重放。
   ///
   /// 自动播放逐手前进时因此是 O(1)，拖动进度条回退时才整局重放。
-  bool _seek(int target) {
+  bool _seek(int target, {bool animate = false}) {
     if (_disposed) return false;
     if (target == _index) return false;
+
+    // 只有逐手前进才播放刚走出的一手；批量跳转与后退直接切到目标局面。
+    _animationStart = animate && target == _index + 1 ? target - 1 : target;
 
     if (target > _index) {
       for (var i = _index; i < target; i++) {

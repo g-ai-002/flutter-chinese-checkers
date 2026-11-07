@@ -82,7 +82,7 @@ class CheckersController extends ChangeNotifier implements BoardSource {
   int get players => setup.players;
 
   @override
-  bool get supportsMoveAnimation => true;
+  int get animationStartIndex => 0;
 
   bool get isFinished => winner != null || isDraw;
 

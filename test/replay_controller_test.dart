@@ -79,7 +79,7 @@ void main() {
     expect(replay.atEnd, isFalse);
     expect(replay.history, isEmpty);
     expect(replay.currentStep, isNull);
-    expect(replay.supportsMoveAnimation, isFalse);
+    expect(replay.animationStartIndex, 0);
     expect(replay.board.holesOf(0), hasLength(10));
     expect(replay.board.holesOf(1), hasLength(10));
     replay.dispose();
@@ -118,6 +118,32 @@ void main() {
     expect(replay.index, 0);
     expect(replay.board.holesOf(0), hasLength(10));
     expect(replay.history, isEmpty);
+    replay.dispose();
+  });
+
+  test('逐手前进只把刚走的一手排进动画，批量跳转与后退不播放', () {
+    final replay = ReplayController(setup: setup, records: sampleRecords(5));
+
+    replay.next();
+    expect(replay.animationStartIndex, 0);
+
+    replay.next();
+    expect(replay.animationStartIndex, 1);
+
+    replay.seekTo(4);
+    expect(replay.animationStartIndex, 4);
+    expect(replay.animationStartIndex, replay.history.length);
+
+    replay.previous();
+    expect(replay.animationStartIndex, replay.history.length);
+
+    replay.next();
+    expect(replay.animationStartIndex, 3);
+
+    replay.toStart();
+    expect(replay.animationStartIndex, 0);
+    replay.next();
+    expect(replay.animationStartIndex, 0);
     replay.dispose();
   });
 
