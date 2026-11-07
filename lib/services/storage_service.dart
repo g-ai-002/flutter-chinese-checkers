@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../models/challenge_result.dart';
 import '../models/game_models.dart';
 import '../models/match_record.dart';
 import '../models/replay_archive.dart';
@@ -13,6 +14,7 @@ class StorageService {
   SharedPreferences? _prefs;
   List<MatchRecord>? _matches;
   _ReplayCache? _replays;
+  Map<String, ChallengeResult>? _challenges;
 
   StorageService._();
 
@@ -165,6 +167,38 @@ class StorageService {
   Future<void> clearReplays() => _write((p) {
     _replays = null;
     return p.remove(AppConstants.prefKeyReplays);
+  });
+
+  /// 残局最佳成绩，按关卡 id 索引；损坏的记录会被跳过。
+  Map<String, ChallengeResult> get challengeResults {
+    final cached = _challenges;
+    if (cached != null) return cached;
+    final stored =
+        _p.getStringList(AppConstants.prefKeyChallenges) ?? const <String>[];
+    final results = <String, ChallengeResult>{};
+    for (final line in stored) {
+      try {
+        final result = ChallengeResult.tryParse(jsonDecode(line));
+        if (result != null) results[result.levelId] = result;
+      } catch (_) {}
+    }
+    return _challenges = Map.unmodifiable(results);
+  }
+
+  /// 只有成绩更好时才覆盖：星级更高，或同星级步数更少。
+  Future<void> saveChallengeResult(ChallengeResult result) => _write((p) {
+    final merged = <String, ChallengeResult>{...challengeResults};
+    final old = merged[result.levelId];
+    if (old == null || result.beats(old)) merged[result.levelId] = result;
+    _challenges = null;
+    return p.setStringList(AppConstants.prefKeyChallenges, [
+      for (final item in merged.values) jsonEncode(item.toJson()),
+    ]);
+  });
+
+  Future<void> clearChallengeResults() => _write((p) {
+    _challenges = null;
+    return p.remove(AppConstants.prefKeyChallenges);
   });
 
   Future<bool> _commitReplays(SharedPreferences p, List<String> lines) {

@@ -14,7 +14,7 @@ class AppConstants {
   AppConstants._();
 
   static const String appName = '中国跳棋';
-  static const String version = '0.5.3';
+  static const String version = '0.6.0';
 
   /// 用户目录下的应用文件夹，日志与导出文件都放在这里。
   static const String appDirName = 'FlutterTiaoqi';
@@ -30,6 +30,7 @@ class AppConstants {
   static const String prefKeyHumanSeat = 'human_seat';
   static const String prefKeyMatches = 'match_history';
   static const String prefKeyReplays = 'replay_archive';
+  static const String prefKeyChallenges = 'challenge_progress';
 
   /// 偏好存储里保留的对局摘要上限，避免历史无限增长。
   static const int maxStoredMatches = 60;

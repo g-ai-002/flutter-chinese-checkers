@@ -1,3 +1,5 @@
+import '../game/challenge_levels.dart';
+
 /// 对局模式。
 enum PlayMode {
   vsAi('人机对战'),
@@ -69,6 +71,7 @@ class GameSetup {
     required this.playerCount,
     this.difficulty = Difficulty.normal,
     this.humanSeat = 0,
+    this.challenge,
   });
 
   final PlayMode mode;
@@ -78,18 +81,33 @@ class GameSetup {
   /// 人机模式下人类执子方；同屏模式不使用。
   final int humanSeat;
 
+  /// 非空时进入残局挑战：固定局面、单人走子、限步完成。
+  final ChallengeLevel? challenge;
+
+  /// 残局使用双人座位表把己方营地转到下方，但只有 0 号座位走子。
+  factory GameSetup.forChallenge(ChallengeLevel level) => GameSetup(
+    mode: PlayMode.vsAi,
+    playerCount: PlayerCount.two,
+    challenge: level,
+  );
+
   int get players => playerCount.count;
 
   List<int> get seatArms => playerCount.seatArms;
 
-  bool isAi(int seat) => mode == PlayMode.vsAi && seat != humanSeat;
+  bool get isChallenge => challenge != null;
 
-  bool isHuman(int seat) => mode == PlayMode.local || seat == humanSeat;
+  bool isAi(int seat) =>
+      !isChallenge && mode == PlayMode.vsAi && seat != humanSeat;
+
+  bool isHuman(int seat) =>
+      isChallenge || mode == PlayMode.local || seat == humanSeat;
 
   /// 目标营地：正对面的角。
   int targetArmOf(int seat) => (seatArms[seat] + 3) % 6;
 
   String seatLabel(int seat) {
+    if (isChallenge) return '你';
     final suffix = switch (mode) {
       PlayMode.local => '玩家 ${seat + 1}',
       PlayMode.vsAi => seat == humanSeat ? '你' : '电脑 ${seat + 1}',

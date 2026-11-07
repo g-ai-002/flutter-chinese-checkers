@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import '../game/challenge_levels.dart';
+import '../models/challenge_result.dart';
 import '../models/game_models.dart';
 import '../models/match_record.dart';
 import '../models/match_summary.dart';
@@ -96,6 +98,34 @@ class SettingsProvider extends ChangeNotifier {
 
   Future<void> clearReplays() async {
     await _storage.clearReplays();
+    notifyListeners();
+  }
+
+  Map<String, ChallengeResult> get challengeResults =>
+      _storage.challengeResults;
+
+  ChallengeResult? challengeResultOf(ChallengeLevel level) =>
+      challengeResults[level.id];
+
+  /// 已通关的关卡数，未知 id 不计入。
+  int get challengeCompleted =>
+      kChallengeLevels.where((level) => challengeResults.containsKey(level.id))
+          .length;
+
+  int get challengeStars => kChallengeLevels.fold(
+    0,
+    (sum, level) => sum + (challengeResults[level.id]?.stars ?? 0),
+  );
+
+  int get maxChallengeStars => kChallengeLevels.length * 3;
+
+  Future<void> saveChallengeResult(ChallengeResult result) async {
+    await _storage.saveChallengeResult(result);
+    notifyListeners();
+  }
+
+  Future<void> clearChallengeResults() async {
+    await _storage.clearChallengeResults();
     notifyListeners();
   }
 

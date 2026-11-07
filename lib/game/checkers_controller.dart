@@ -24,6 +24,7 @@ class CheckersController extends ChangeNotifier implements BoardSource {
     BoardGeometry? geometry,
     Random? random,
     this.aiDelay = const Duration(milliseconds: 520),
+    this.allowUndo = true,
   }) : geometry = geometry ?? BoardGeometry.star(),
        _random = random ?? Random() {
     rules = CheckersRules(this.geometry);
@@ -49,6 +50,9 @@ class CheckersController extends ChangeNotifier implements BoardSource {
   @override
   final BoardGeometry geometry;
   final Duration aiDelay;
+
+  /// 残局模式禁用悔棋，成绩才有可比性。
+  final bool allowUndo;
   final Random _random;
 
   late final CheckersRules rules;
@@ -78,8 +82,9 @@ class CheckersController extends ChangeNotifier implements BoardSource {
 
   List<MoveRecord> get records => List.unmodifiable(history);
 
+  /// 残局只有己方一方走子，障碍子永远不轮到。
   @override
-  int get players => setup.players;
+  int get players => setup.isChallenge ? 1 : setup.players;
 
   @override
   int get animationStartIndex => 0;
@@ -87,6 +92,13 @@ class CheckersController extends ChangeNotifier implements BoardSource {
   bool get isFinished => winner != null || isDraw;
 
   bool get isHumanTurn => setup.isHuman(currentSeat);
+
+  /// 残局剩余步数；非残局返回 null。
+  int? get movesLeft {
+    final limit = setup.challenge?.moveLimit;
+    if (limit == null) return null;
+    return (limit - history.length).clamp(0, limit);
+  }
 
   CheckersMove? get lastMove => history.isEmpty ? null : history.last.move;
 
@@ -103,7 +115,7 @@ class CheckersController extends ChangeNotifier implements BoardSource {
   Duration get duration => isFinished ? _duration : _elapsed;
 
   bool get canUndo {
-    if (history.isEmpty) return false;
+    if (!allowUndo || setup.isChallenge || history.isEmpty) return false;
     if (setup.mode == PlayMode.local) return true;
     return history.any((record) => record.seat == setup.humanSeat);
   }
@@ -118,10 +130,18 @@ class CheckersController extends ChangeNotifier implements BoardSource {
   void start() {
     if (_startedAt != null) return;
     _startedAt = DateTime.now();
-    LogService.info(
-      '开始对局: ${setup.mode.label}, ${setup.playerCount.label}, '
-      '难度 ${setup.difficulty.label}, 人类座位 ${setup.humanSeat + 1}',
-    );
+    final challenge = setup.challenge;
+    if (challenge != null) {
+      LogService.info(
+        '开始残局: ${challenge.id} ${challenge.name}, '
+        '预算 ${challenge.moveLimit} 步, 参考 ${challenge.parMoves} 步',
+      );
+    } else {
+      LogService.info(
+        '开始对局: ${setup.mode.label}, ${setup.playerCount.label}, '
+        '难度 ${setup.difficulty.label}, 人类座位 ${setup.humanSeat + 1}',
+      );
+    }
     _scheduleAiIfNeeded();
   }
 
@@ -193,6 +213,12 @@ class CheckersController extends ChangeNotifier implements BoardSource {
             '对局结束: ${setup.seatLabel(mover)} 获胜, ${history.length} 步, '
             '${_elapsed.inSeconds}s',
       );
+      return;
+    }
+
+    final limit = setup.challenge?.moveLimit;
+    if (limit != null && history.length >= limit) {
+      _endGame(message: '残局失败: ${setup.challenge!.name} 步数用尽');
       return;
     }
 
@@ -302,7 +328,10 @@ class CheckersController extends ChangeNotifier implements BoardSource {
   }
 
   void _resetState() {
-    board = CheckersBoard.initial(geometry, setup.seatArms);
+    final challenge = setup.challenge;
+    board = challenge == null
+        ? CheckersBoard.initial(geometry, setup.seatArms)
+        : CheckersBoard(challenge.cellsFor(geometry));
     currentSeat = 0;
     winner = null;
     isDraw = false;
