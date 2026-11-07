@@ -39,7 +39,7 @@
 
 ### v0.5.2 (PATCH) — 2026-11-07
 
-- **状态**: 开发完成，等待 CI 发布 🚧
+- **状态**: 已发布 ✅（[Gitea Release](http://192.168.31.120:3020/GTech/flutter-chinese-checkers/releases/tag/v0.5.2)）
 - **目标**: 修复 Issue #1：复盘逐手回看与自动播放时保留走子动画。
 - **任务**:
   - [x] `BoardSource` 以「动画起始序号」描述新增着法，实时对局与复盘共用同一套补播逻辑
