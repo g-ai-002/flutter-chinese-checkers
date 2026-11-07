@@ -13,7 +13,7 @@ class AppConstants {
   AppConstants._();
 
   static const String appName = '中国跳棋';
-  static const String version = '0.6.2';
+  static const String version = '0.6.3';
 
   /// 用户目录下的应用文件夹，日志与导出文件都放在这里。
   static const String appDirName = 'FlutterTiaoqi';
@@ -27,6 +27,7 @@ class AppConstants {
   static const String prefKeyPlayerCount = 'player_count';
   static const String prefKeyDifficulty = 'difficulty';
   static const String prefKeyHumanSeat = 'human_seat';
+  static const String prefKeyLogicRate = 'logic_rate';
   static const String prefKeyMatches = 'match_history';
   static const String prefKeyReplays = 'replay_archive';
   static const String prefKeyChallenges = 'challenge_progress';

@@ -637,9 +637,6 @@ class BoardComponent extends PositionComponent with TapCallbacks {
     }
   }
 
-  @visibleForTesting
-  double get boardScale => _scale;
-
   /// 棋子层重新录制的次数，用于验证静止帧复用了缓存。
   @visibleForTesting
   int get pieceLayerBuilds => _piecesBuilds;

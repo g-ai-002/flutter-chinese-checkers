@@ -86,6 +86,11 @@ class StorageService {
   Future<void> setHumanSeat(int value) =>
       _write((p) => p.setInt(AppConstants.prefKeyHumanSeat, value));
 
+  LogicRate get logicRate =>
+      LogicRate.byHz(_p.getInt(AppConstants.prefKeyLogicRate));
+  Future<void> setLogicRate(LogicRate value) =>
+      _write((p) => p.setInt(AppConstants.prefKeyLogicRate, value.hz));
+
   /// 已保存的对局摘要，按时间倒序；损坏的记录会被跳过。
   ///
   /// 解析结果会缓存到下一次写入，界面重建时不必反复解码 JSON。

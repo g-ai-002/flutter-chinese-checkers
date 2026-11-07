@@ -35,6 +35,29 @@ enum Difficulty {
   }
 }
 
+/// 逻辑更新速率：渲染跟随屏幕刷新，逻辑按固定步长推进。
+enum LogicRate {
+  hz30(30, '省电优先，低端设备更稳'),
+  hz60(60, '性能与流畅度平衡'),
+  hz120(120, '高刷屏动画最顺滑');
+
+  const LogicRate(this.hz, this.description);
+
+  final int hz;
+  final String description;
+
+  /// 默认 60Hz：多数屏幕的刷新率，兼顾性能与手感。
+  static const LogicRate defaultRate = LogicRate.hz60;
+
+  String get label => '$hz Hz';
+
+  double get stepSeconds => 1 / hz;
+
+  /// 未知或缺失的保存值回退到默认速率。
+  static LogicRate byHz(int? hz) =>
+      values.firstWhere((rate) => rate.hz == hz, orElse: () => defaultRate);
+}
+
 /// 可选玩家人数，每个阵营占据棋盘六个角中的一个。
 enum PlayerCount {
   two(2, '2 人', [0, 3]),

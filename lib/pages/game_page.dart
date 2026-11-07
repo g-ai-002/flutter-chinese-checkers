@@ -49,6 +49,7 @@ class _GamePageState extends State<GamePage> {
       source: _controller,
       theme: settings.boardTheme,
       showHints: settings.showHints,
+      logicRate: settings.logicRate,
     );
     _controller.addListener(_onControllerChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {

@@ -64,6 +64,10 @@ class SettingsProvider extends ChangeNotifier {
   Future<void> setHumanSeat(int value) =>
       _update(() => _storage.setHumanSeat(value));
 
+  LogicRate get logicRate => _storage.logicRate;
+  Future<void> setLogicRate(LogicRate value) =>
+      _update(() => _storage.setLogicRate(value));
+
   List<MatchRecord> get matches => _storage.matches;
 
   MatchSummary? _summary;

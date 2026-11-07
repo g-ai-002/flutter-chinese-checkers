@@ -101,7 +101,32 @@ class SettingsPage extends StatelessWidget {
                     Icons.chevron_right,
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
-                  onTap: () => _pickPlayerCount(context, settings),
+                  onTap: () => _pickOption(
+                    context,
+                    '默认玩家人数',
+                    PlayerCount.values,
+                    (count) => count.label,
+                    settings.setPlayerCount,
+                  ),
+                ),
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                  title: const Text('逻辑更新速率'),
+                  subtitle: Text(
+                    '${settings.logicRate.label} · '
+                    '${settings.logicRate.description}',
+                  ),
+                  trailing: Icon(
+                    Icons.chevron_right,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                  onTap: () => _pickOption(
+                    context,
+                    '逻辑更新速率',
+                    LogicRate.values,
+                    (rate) => '${rate.label} · ${rate.description}',
+                    settings.setLogicRate,
+                  ),
                 ),
               ],
             ),
@@ -163,29 +188,31 @@ class SettingsPage extends StatelessWidget {
     );
   }
 
-  Future<void> _pickPlayerCount(
+  Future<void> _pickOption<T>(
     BuildContext context,
-    SettingsProvider settings,
+    String title,
+    List<T> values,
+    String Function(T value) label,
+    Future<void> Function(T value) onPicked,
   ) async {
-    final value = await showDialog<PlayerCount>(
+    final value = await showDialog<T>(
       context: context,
       builder: (dialogContext) => SimpleDialog(
-        title: const Text('默认玩家人数'),
+        title: Text(title),
         children: [
-          for (final count in PlayerCount.values)
+          for (final item in values)
             SimpleDialogOption(
-              onPressed: () => Navigator.of(dialogContext).pop(count),
-              child: Text(count.label),
+              onPressed: () => Navigator.of(dialogContext).pop(item),
+              child: Text(label(item)),
             ),
         ],
       ),
     );
-    if (value != null) await settings.setPlayerCount(value);
+    if (value != null) await onPicked(value);
   }
 
   Future<void> _showLogs(BuildContext context) async {
     final logs = LogService.getRecentLogs(300);
-    final size = MediaQuery.sizeOf(context);
     final path = LogService.logFilePath.isNotEmpty
         ? LogService.logFilePath
         : await FileSystemService.instance.getLogRootPath();
@@ -196,44 +223,28 @@ class SettingsPage extends StatelessWidget {
         final theme = Theme.of(dialogContext);
         return AlertDialog(
           title: const Text('最近日志'),
-          content: SizedBox(
-            width: size.width < 720 ? double.infinity : 620,
-            height: size.height < 640 ? size.height * 0.55 : 420,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (path.isNotEmpty)
-                  Text(
-                    path,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                const SizedBox(height: 10),
-                Expanded(
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: SingleChildScrollView(
-                      child: SelectableText(
-                        logs.isEmpty ? '暂无日志' : logs.join('\n'),
-                        style: const TextStyle(
-                          fontFamily: 'monospace',
-                          fontSize: 11,
-                          height: 1.5,
-                        ),
-                      ),
-                    ),
+          scrollable: true,
+          content: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (path.isNotEmpty)
+                Text(
+                  path,
+                  maxLines: 2,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
-              ],
-            ),
+              const SizedBox(height: 10),
+              SelectableText(
+                logs.isEmpty ? '暂无日志' : logs.join('\n'),
+                style: const TextStyle(
+                  fontFamily: 'monospace',
+                  fontSize: 11,
+                  height: 1.5,
+                ),
+              ),
+            ],
           ),
           actions: [
             TextButton.icon(
@@ -312,6 +323,7 @@ class _ThemeTile extends StatelessWidget {
         children: [
           Container(
             height: 64,
+            alignment: Alignment.center,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
               gradient: LinearGradient(
@@ -326,15 +338,13 @@ class _ThemeTile extends StatelessWidget {
                 width: 2.4,
               ),
             ),
-            child: Center(
-              child: Container(
-                width: 26,
-                height: 26,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: boardTheme.holeFill,
-                  border: Border.all(color: boardTheme.holeEdge, width: 2),
-                ),
+            child: Container(
+              width: 26,
+              height: 26,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: boardTheme.holeFill,
+                border: Border.all(color: boardTheme.holeEdge, width: 2),
               ),
             ),
           ),

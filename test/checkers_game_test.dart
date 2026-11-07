@@ -63,4 +63,48 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     controller.dispose();
   });
+
+  test('逻辑更新速率默认 60Hz，未知值回退默认', () {
+    expect(LogicRate.defaultRate, LogicRate.hz60);
+    expect(LogicRate.byHz(30), LogicRate.hz30);
+    expect(LogicRate.byHz(120), LogicRate.hz120);
+    expect(LogicRate.byHz(45), LogicRate.hz60);
+    expect(LogicRate.byHz(null), LogicRate.hz60);
+    expect(LogicRate.hz120.stepSeconds, 1 / 120);
+  });
+
+  test('逻辑按所选速率固定步长推进，卡顿帧不无限补步', () {
+    final controller = CheckersController(setup: setup);
+    final theme = kBoardThemes.first;
+
+    final slow = CheckersGame(
+      source: controller,
+      theme: theme,
+      logicRate: LogicRate.hz30,
+    );
+    slow.update(1 / 60);
+    expect(slow.logicSteps, 0);
+    slow.update(1 / 60);
+    expect(slow.logicSteps, 1);
+
+    final fast = CheckersGame(
+      source: controller,
+      theme: theme,
+      logicRate: LogicRate.hz120,
+    );
+    fast.update(1 / 60);
+    expect(fast.logicSteps, 2);
+
+    // 1 秒的卡顿帧只补 8 步，余量丢弃，避免逻辑越追越慢。
+    fast.update(1);
+    expect(fast.logicSteps, 10);
+    fast.update(1 / 120);
+    expect(fast.logicSteps, 11);
+
+    expect(
+      CheckersGame(source: controller, theme: theme).logicRate,
+      LogicRate.hz60,
+    );
+    controller.dispose();
+  });
 }

@@ -1,3 +1,4 @@
+import 'package:chinese_checkers/models/game_models.dart';
 import 'package:chinese_checkers/pages/settings_page.dart';
 import 'package:chinese_checkers/providers/settings_provider.dart';
 import 'package:chinese_checkers/services/storage_service.dart';
@@ -67,6 +68,22 @@ void main() {
     await tester.tap(find.text('走子音效'));
     await tester.pump();
     expect(settings.soundEnabled, isFalse);
+  });
+
+  testWidgets('逻辑更新速率可选 30 / 60 / 120Hz 并写入偏好', (tester) async {
+    await boot(tester);
+    await tester.scrollUntilVisible(find.text('逻辑更新速率'), 240);
+    await tester.tap(find.text('逻辑更新速率'));
+    await tester.pumpAndSettle();
+    expect(find.text('30 Hz · 省电优先，低端设备更稳'), findsOneWidget);
+    expect(find.text('60 Hz · 性能与流畅度平衡'), findsNWidgets(2));
+    expect(find.text('120 Hz · 高刷屏动画最顺滑'), findsOneWidget);
+
+    await tester.tap(find.text('120 Hz · 高刷屏动画最顺滑'));
+    await tester.pumpAndSettle();
+    expect(settings.logicRate, LogicRate.hz120);
+    final storage = await StorageService.instance;
+    expect(storage.logicRate, LogicRate.hz120);
   });
 
   testWidgets('窄屏下设置页不溢出', (tester) async {

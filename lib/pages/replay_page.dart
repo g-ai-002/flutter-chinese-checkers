@@ -36,6 +36,7 @@ class _ReplayPageState extends State<ReplayPage> {
       source: _replay,
       theme: context.read<SettingsProvider>().boardTheme,
       showHints: false,
+      logicRate: context.read<SettingsProvider>().logicRate,
     );
     _replay.addListener(_syncScroll);
     LogService.info(

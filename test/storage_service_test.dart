@@ -26,6 +26,7 @@ void main() {
     expect(storage.showHints, isTrue);
     expect(storage.playerCount, PlayerCount.two);
     expect(storage.difficulty, Difficulty.normal);
+    expect(storage.logicRate, LogicRate.hz60);
     expect(storage.boardThemeId, isNull);
     expect(boardThemeOf(storage.boardThemeId).id, 'jade');
   });
@@ -41,6 +42,7 @@ void main() {
     await storage.setPlayerCount(PlayerCount.six);
     await storage.setDifficulty(Difficulty.hard);
     await storage.setHumanSeat(4);
+    await storage.setLogicRate(LogicRate.hz120);
 
     StorageService.resetForTests();
     final reopened = await StorageService.instance;
@@ -54,6 +56,7 @@ void main() {
     expect(reopened.difficulty, Difficulty.hard);
     expect(reopened.humanSeatFor(6), 4);
     expect(reopened.humanSeatFor(2), 0);
+    expect(reopened.logicRate, LogicRate.hz120);
   });
 
   test('未知或越界的保存值回退到安全默认值', () async {
@@ -61,11 +64,13 @@ void main() {
       'board_theme': 'unknown',
       'difficulty': 'impossible',
       'player_count': 5,
+      'logic_rate': 45,
     });
     final storage = await StorageService.instance;
     expect(boardThemeOf(storage.boardThemeId).id, 'jade');
     expect(storage.difficulty, Difficulty.normal);
     expect(storage.playerCount, PlayerCount.two);
+    expect(storage.logicRate, LogicRate.hz60);
   });
 
   test('设置变更会通知界面并同步音效开关', () async {
