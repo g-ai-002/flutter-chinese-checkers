@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -19,8 +20,7 @@ import 'widgets/board_stage.dart';
 import 'widgets/challenge_widgets.dart';
 import 'widgets/confirm_dialog.dart';
 import 'widgets/game_dialogs.dart';
-import 'widgets/players_panel.dart';
-import 'widgets/surface_card.dart';
+import 'widgets/game_hud.dart';
 
 class GamePage extends StatefulWidget {
   const GamePage({super.key, required this.setup});
@@ -163,9 +163,7 @@ class _GamePageState extends State<GamePage> {
           ChallengeResult(levelId: challenge.id, stars: stars, moves: moves),
         ),
       );
-      LogService.info(
-        '残局通关: ${challenge.id}, $moves 步, $stars 星',
-      );
+      LogService.info('残局通关: ${challenge.id}, $moves 步, $stars 星');
     } else {
       LogService.info('残局失败: ${challenge.id}, 预算 ${challenge.moveLimit} 步');
     }
@@ -218,7 +216,7 @@ class _GamePageState extends State<GamePage> {
     if (leave && mounted) Navigator.of(context).pop();
   }
 
-  /// 只刷新依赖对局状态的小区域，棋盘画布不参与整页重建。
+  /// 只刷新依赖对局状态的小区域，棋盘画布不参与重建。
   Widget _watch(Widget Function() builder) {
     return ListenableBuilder(
       listenable: _controller,
@@ -226,9 +224,17 @@ class _GamePageState extends State<GamePage> {
     );
   }
 
+  String get _title {
+    final challenge = widget.setup.challenge;
+    if (challenge == null) {
+      return '${widget.setup.playerCount.label} · ${widget.setup.mode.label}';
+    }
+    return '第 ${challengeIndexOf(challenge) + 1} 关 · ${challenge.name}';
+  }
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final challenge = widget.setup.challenge;
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) async {
@@ -238,290 +244,164 @@ class _GamePageState extends State<GamePage> {
         Navigator.of(this.context).pop();
       },
       child: Scaffold(
-        appBar: AppBar(
-          leading: IconButton(
-            tooltip: '返回',
-            onPressed: _leave,
-            icon: const Icon(Icons.arrow_back),
-          ),
-          title: Text(
-            widget.setup.challenge == null
-                ? '${widget.setup.playerCount.label} · ${widget.setup.mode.label}'
-                : '第 ${challengeIndexOf(widget.setup.challenge!) + 1} 关 · '
-                      '${widget.setup.challenge!.name}',
-          ),
-          actions: [
-            if (widget.setup.challenge == null)
-              _watch(
-                () => IconButton(
-                  tooltip: _controller.isFinished ? '复盘' : '复盘（终局后可查看）',
-                  onPressed: _controller.isFinished ? _openReplay : null,
-                  icon: const Icon(Icons.history, size: 21),
-                ),
-              ),
-            IconButton(
-              tooltip: '玩法说明',
-              onPressed: () => showRulesDialog(context),
-              icon: const Icon(Icons.info_outline, size: 21),
-            ),
-            const SizedBox(width: 6),
-          ],
-        ),
         body: SafeArea(
-          top: false,
           child: LayoutBuilder(
             builder: (context, constraints) {
               final wide = constraints.maxWidth >= kGameWideBreakpoint;
-              return wide ? _buildWide(theme) : _buildCompact();
+              final dense = constraints.maxHeight < 700;
+              // 右侧为复盘 / 玩法按钮留出位置，标题在其中省略而不是被压住。
+              final rightReserve = challenge == null ? 112.0 : 62.0;
+              final hudMaxWidth = math.max(
+                180.0,
+                constraints.maxWidth - 20 - rightReserve,
+              );
+              final hudWidth = math.min(230.0, hudMaxWidth);
+              return Stack(
+                children: [
+                  // 棋盘独占整个可用区域，四周信息全部叠在它上面。
+                  Positioned.fill(
+                    child: BoardStage(
+                      game: _game,
+                      gameKey: const ValueKey('board'),
+                      maxWidth: double.infinity,
+                    ),
+                  ),
+                  Positioned(
+                    left: 10,
+                    top: 8,
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(maxWidth: hudMaxWidth),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              HudButton(
+                                icon: Icons.arrow_back,
+                                tooltip: '返回',
+                                onPressed: _leave,
+                              ),
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: HudPanel(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 9,
+                                  ),
+                                  child: Text(
+                                    _title,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleSmall,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          _watch(
+                            () => challenge == null
+                                ? TurnHud(
+                                    controller: _controller,
+                                    width: hudWidth,
+                                    dense: dense,
+                                  )
+                                : ChallengeHud(
+                                    controller: _controller,
+                                    level: challenge,
+                                    width: hudWidth,
+                                  ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    right: 10,
+                    top: 8,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (challenge == null) ...[
+                              _watch(
+                                () => HudButton(
+                                  icon: Icons.history,
+                                  tooltip: _controller.isFinished
+                                      ? '复盘'
+                                      : '复盘（终局后可查看）',
+                                  onPressed: _controller.isFinished
+                                      ? _openReplay
+                                      : null,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                            ],
+                            HudButton(
+                              icon: Icons.info_outline,
+                              tooltip: '玩法说明',
+                              onPressed: () => showRulesDialog(context),
+                            ),
+                          ],
+                        ),
+                        if (challenge != null) ...[
+                          const SizedBox(height: 8),
+                          HudButton(
+                            icon: Icons.flag_outlined,
+                            tooltip: '查看关卡目标',
+                            label: '关卡目标',
+                            onPressed: () =>
+                                showChallengeBriefDialog(context, challenge),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  if (challenge == null)
+                    Positioned(
+                      left: 10,
+                      bottom: 10,
+                      child: dense
+                          ? HudButton(
+                              icon: Icons.leaderboard_outlined,
+                              tooltip: '对局进度',
+                              onPressed: () => showPlayerProgressDialog(
+                                context,
+                                _controller,
+                              ),
+                            )
+                          : _watch(
+                              () => PlayersHud(
+                                controller: _controller,
+                                width: wide ? 132 : 122,
+                                showTitle: wide,
+                              ),
+                            ),
+                    ),
+                  Positioned(
+                    right: 10,
+                    bottom: 10,
+                    child: _watch(
+                      () => ActionDock(
+                        controller: _controller,
+                        onHint: _controller.requestHint,
+                        onUndo: _controller.undo,
+                        onRestart: _requestRestart,
+                        showUndo: challenge == null,
+                      ),
+                    ),
+                  ),
+                ],
+              );
             },
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildWide(ThemeData theme) {
-    final challenge = widget.setup.challenge;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: Column(
-              children: [
-                if (challenge == null)
-                  _watch(() => TurnBanner(controller: _controller))
-                else
-                  _watch(
-                    () => ChallengeStatusBar(
-                      controller: _controller,
-                      level: challenge,
-                    ),
-                  ),
-                const SizedBox(height: 10),
-                Expanded(
-                  child: BoardStage(
-                    game: _game,
-                    gameKey: const ValueKey('board'),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                _watch(
-                  () => GameActionBar(
-                    controller: _controller,
-                    onHint: _controller.requestHint,
-                    onUndo: _controller.undo,
-                    onRestart: _requestRestart,
-                    showUndo: challenge == null,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 20),
-          SizedBox(
-            width: 300,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: 4),
-                Text(
-                  challenge == null ? '对局进度' : '关卡目标',
-                  style: theme.textTheme.titleSmall,
-                ),
-                const SizedBox(height: 10),
-                if (challenge == null)
-                  _watch(
-                    () => PlayerStandings(
-                      controller: _controller,
-                      vertical: true,
-                    ),
-                  )
-                else
-                  _watch(
-                    () => _ChallengeBrief(level: challenge),
-                  ),
-                const Spacer(),
-                _Legend(theme: theme),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCompact() {
-    final challenge = widget.setup.challenge;
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
-          child: challenge == null
-              ? _watch(() => TurnBanner(controller: _controller))
-              : _watch(
-                  () => ChallengeStatusBar(
-                    controller: _controller,
-                    level: challenge,
-                  ),
-                ),
-        ),
-        if (challenge == null) ...[
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: _watch(() => PlayerStandings(controller: _controller)),
-          ),
-        ],
-        const SizedBox(height: 4),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: BoardStage(game: _game, gameKey: const ValueKey('board')),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(12, 4, 12, 10),
-          child: _watch(
-            () => GameActionBar(
-              controller: _controller,
-              onHint: _controller.requestHint,
-              onUndo: _controller.undo,
-              onRestart: _requestRestart,
-              showUndo: challenge == null,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-/// 宽屏残局的关卡说明：参考步数、星级门槛与障碍提示。
-class _ChallengeBrief extends StatelessWidget {
-  const _ChallengeBrief({required this.level});
-
-  final ChallengeLevel level;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final style = theme.textTheme.bodySmall?.copyWith(
-      color: theme.colorScheme.onSurfaceVariant,
-      height: 1.6,
-    );
-    return SurfaceCard(
-      title: '把 10 枚棋子送进上方营地',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(level.hint, style: style),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              const Icon(
-                Icons.star_rounded,
-                size: 18,
-                color: Color(0xFFE0A526),
-              ),
-              const SizedBox(width: 5),
-              Expanded(
-                child: Text(
-                  '三星 ≤ ${level.parMoves} 步 · '
-                  '两星 ≤ ${level.parMoves + 2} 步',
-                  style: style,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text('障碍子可跨越，不会移动。', style: style),
-        ],
-      ),
-    );
-  }
-}
-
-class _Legend extends StatelessWidget {
-  const _Legend({required this.theme});
-
-  final ThemeData theme;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = theme.colorScheme;
-    return SurfaceCard(
-      title: '怎么看',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _LegendRow(
-            marker: Container(
-              width: 9,
-              height: 9,
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-              ),
-            ),
-            text: '圆点是单步可落位置',
-          ),
-          const SizedBox(height: 8),
-          _LegendRow(
-            marker: Container(
-              width: 13,
-              height: 13,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.8),
-                  width: 2,
-                ),
-              ),
-            ),
-            text: '双环是连跳可落位置',
-          ),
-          const SizedBox(height: 8),
-          _LegendRow(
-            marker: Container(
-              width: 9,
-              height: 9,
-              decoration: BoxDecoration(
-                color: colors.tertiary,
-                shape: BoxShape.circle,
-              ),
-            ),
-            text: '营地底色的对面即目标',
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _LegendRow extends StatelessWidget {
-  const _LegendRow({required this.marker, required this.text});
-
-  final Widget marker;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Row(
-      children: [
-        SizedBox(width: 15, child: Center(child: marker)),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            text,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

@@ -6,6 +6,9 @@ import 'package:flutter/material.dart';
 import '../../flame/checkers_game.dart';
 
 /// 棋盘舞台：把 Flame 画布按固定比例放进可用空间，宽高都尽量铺满。
+///
+/// [maxWidth] 默认保留舒适的阅读宽度；对局主界面会传入
+/// [double.infinity]，让棋盘由可用空间决定尺寸。
 class BoardStage extends StatelessWidget {
   const BoardStage({
     super.key,

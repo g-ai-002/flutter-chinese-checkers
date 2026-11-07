@@ -164,6 +164,14 @@ Future<void> showRulesDialog(BuildContext context) {
                 '「提示」会给出一手推荐的走法；「悔棋」在人机模式回到自己上一次走棋之前。',
                 style: theme.bodyMedium,
               ),
+              const SizedBox(height: 14),
+              Text('落点提示', style: theme.titleSmall),
+              const SizedBox(height: 4),
+              Text(
+                '白色圆点是单步可落位置，白色双环是连跳可落位置；'
+                '营地底色的对面即目标。',
+                style: theme.bodyMedium,
+              ),
             ],
           ),
         ),
