@@ -42,10 +42,17 @@ class BoardComponent extends PositionComponent with TapCallbacks {
   double _time = 0;
 
   double _cacheScale = 0;
-  String _cacheKey = '';
   ui.Picture? _boardLayer;
   final Map<int, ui.Picture> _sprites = {};
   double _spriteScale = 0;
+
+  /// 棋子层按当前局面录成一张 Picture，静止时不再逐枚绘制。
+  ui.Picture? _piecesLayer;
+  CheckersBoard? _piecesBoard;
+  int _piecesHistory = -1;
+  BoardTheme? _piecesTheme;
+  double _piecesScale = 0;
+  int _piecesBuilds = 0;
 
   BoardGeometry get _geometry => source.geometry;
 
@@ -61,13 +68,15 @@ class BoardComponent extends PositionComponent with TapCallbacks {
     theme.removeListener(_invalidate);
     _animator.clear();
     _disposeLayers();
+    _disposePieces();
     super.onRemove();
   }
 
   void _invalidate() {
-    _cacheKey = '';
     _cacheScale = 0;
     _spriteScale = 0;
+    _disposeLayers();
+    _disposePieces();
     for (final sprite in _sprites.values) {
       sprite.dispose();
     }
@@ -77,6 +86,13 @@ class BoardComponent extends PositionComponent with TapCallbacks {
   void _disposeLayers() {
     _boardLayer?.dispose();
     _boardLayer = null;
+  }
+
+  void _disposePieces() {
+    _piecesLayer?.dispose();
+    _piecesLayer = null;
+    _piecesBoard = null;
+    _piecesHistory = -1;
   }
 
   @override
@@ -167,15 +183,9 @@ class BoardComponent extends PositionComponent with TapCallbacks {
 
   /// 底板、营地底色与孔位不随对局变化，随尺寸缓存为一张图片。
   void _ensureLayers(double scale) {
-    final key = '${theme.value.id}-${source.setup.seatArms.join(',')}';
-    if (_boardLayer != null &&
-        (_cacheScale - scale).abs() < 0.01 &&
-        _cacheKey == key) {
-      return;
-    }
+    if (_boardLayer != null && (_cacheScale - scale).abs() < 0.01) return;
     _disposeLayers();
     _cacheScale = scale;
-    _cacheKey = key;
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
     _paintPlate(canvas, scale);
@@ -408,6 +418,14 @@ class BoardComponent extends PositionComponent with TapCallbacks {
   }
 
   void _drawPieces(Canvas canvas, List<int> cells, MoveAnimation? anim) {
+    if (anim == null) {
+      _ensurePieces();
+      final layer = _piecesLayer;
+      if (layer != null) {
+        canvas.drawPicture(layer);
+        return;
+      }
+    }
     final hiddenHole = anim?.move.to;
     for (var hole = 0; hole < cells.length; hole++) {
       final seat = cells[hole];
@@ -418,6 +436,37 @@ class BoardComponent extends PositionComponent with TapCallbacks {
     final position = _animPosition(anim);
     final lift = _animLift(anim);
     _drawPiece(canvas, position - Offset(0, lift), cells[anim.move.to]);
+  }
+
+  /// 局面静止时把全部棋子录成一张 Picture。
+  ///
+  /// 缓存键只需覆盖「棋盘对象 + 着法数 + 尺寸 + 配色」：实时对局每走一手
+  /// 着法数都会增加，悔棋与复盘回退会换掉棋盘对象，因此不会读到旧局面。
+  void _ensurePieces() {
+    final board = source.board;
+    final scale = _scale;
+    if (_piecesLayer != null &&
+        identical(_piecesBoard, board) &&
+        _piecesHistory == source.history.length &&
+        (_piecesScale - scale).abs() < 0.001 &&
+        _piecesTheme == theme.value) {
+      return;
+    }
+    _disposePieces();
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    final cells = board.cells;
+    for (var hole = 0; hole < cells.length; hole++) {
+      final seat = cells[hole];
+      if (seat < 0) continue;
+      _drawPiece(canvas, _point(hole), seat);
+    }
+    _piecesLayer = recorder.endRecording();
+    _piecesBoard = board;
+    _piecesHistory = source.history.length;
+    _piecesTheme = theme.value;
+    _piecesScale = scale;
+    _piecesBuilds++;
   }
 
   Offset _animPosition(MoveAnimation anim) {
@@ -549,6 +598,13 @@ class BoardComponent extends PositionComponent with TapCallbacks {
 
   @visibleForTesting
   double get boardScale => _scale;
+
+  /// 棋子层重新录制的次数，用于验证静止帧复用了缓存。
+  @visibleForTesting
+  int get pieceLayerBuilds => _piecesBuilds;
+
+  /// 当前是否需要持续刷新：走子动画或选中棋子的呼吸高亮。
+  bool get wantsFrames => _animator.isAnimating || source.selectedHole != null;
 
   /// 当前是否有待播放的走子动画。
   @visibleForTesting

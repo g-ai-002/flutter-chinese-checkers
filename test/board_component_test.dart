@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:chinese_checkers/flame/board_component.dart';
 import 'package:chinese_checkers/game/board_geometry.dart';
 import 'package:chinese_checkers/game/checkers_board.dart';
@@ -6,7 +8,9 @@ import 'package:chinese_checkers/game/checkers_rules.dart';
 import 'package:chinese_checkers/game/replay_controller.dart';
 import 'package:chinese_checkers/models/game_models.dart';
 import 'package:chinese_checkers/theme/app_theme.dart';
+import 'package:flame/components.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -115,4 +119,55 @@ void main() {
     replay.dispose();
     theme.dispose();
   });
+
+  test('静止帧复用棋子层，局面变化后重新录制', () async {
+    final controller = CheckersController(setup: setup);
+    final theme = ValueNotifier<BoardTheme>(kBoardThemes.first);
+    final board = BoardComponent(
+      source: controller,
+      theme: theme,
+      showHints: true,
+    );
+    await board.onLoad();
+    board.size = Vector2(680, 777);
+    board.update(0);
+
+    _render(board);
+    final builds = board.pieceLayerBuilds;
+    expect(builds, 1);
+    _render(board);
+    _render(board);
+    expect(board.pieceLayerBuilds, builds);
+    expect(board.wantsFrames, isFalse);
+
+    // 选中棋子会持续呼吸高亮，需要保持刷新。
+    controller.tapHole(controller.board.holesOf(0).first);
+    expect(board.wantsFrames, isTrue);
+
+    // 走子动画期间逐帧绘制，动画结束后再录一张新的棋子层。
+    final move = controller.rules.legalMoves(controller.board, 0).first;
+    controller.applyMove(move);
+    board.update(0);
+    expect(board.isAnimating, isTrue);
+    _render(board);
+    expect(board.pieceLayerBuilds, builds);
+
+    board.update(10);
+    _render(board);
+    expect(board.pieceLayerBuilds, builds + 1);
+
+    // 换配色后棋盘层与棋子层都要重录。
+    theme.value = kBoardThemes.last;
+    _render(board);
+    expect(board.pieceLayerBuilds, builds + 2);
+
+    controller.dispose();
+    theme.dispose();
+  });
+}
+
+void _render(BoardComponent board) {
+  final recorder = ui.PictureRecorder();
+  board.render(ui.Canvas(recorder));
+  recorder.endRecording().dispose();
 }

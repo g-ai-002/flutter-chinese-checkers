@@ -65,7 +65,6 @@ class _GamePageState extends State<GamePage> {
 
   void _onControllerChanged() {
     if (!mounted) return;
-    setState(() {});
     final count = _controller.history.length;
     if (count > _seenMoves) {
       final move = _controller.lastMove;
@@ -167,6 +166,14 @@ class _GamePageState extends State<GamePage> {
     if (leave && mounted) Navigator.of(context).pop();
   }
 
+  /// 只刷新依赖对局状态的小区域，棋盘画布不参与整页重建。
+  Widget _watch(Widget Function() builder) {
+    return ListenableBuilder(
+      listenable: _controller,
+      builder: (context, _) => builder(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -189,10 +196,12 @@ class _GamePageState extends State<GamePage> {
             '${widget.setup.playerCount.label} · ${widget.setup.mode.label}',
           ),
           actions: [
-            IconButton(
-              tooltip: _controller.isFinished ? '复盘' : '复盘（终局后可查看）',
-              onPressed: _controller.isFinished ? _openReplay : null,
-              icon: const Icon(Icons.history, size: 21),
+            _watch(
+              () => IconButton(
+                tooltip: _controller.isFinished ? '复盘' : '复盘（终局后可查看）',
+                onPressed: _controller.isFinished ? _openReplay : null,
+                icon: const Icon(Icons.history, size: 21),
+              ),
             ),
             IconButton(
               tooltip: '玩法说明',
@@ -207,7 +216,7 @@ class _GamePageState extends State<GamePage> {
           child: LayoutBuilder(
             builder: (context, constraints) {
               final wide = constraints.maxWidth >= kGameWideBreakpoint;
-              return wide ? _buildWide(theme) : _buildCompact(theme);
+              return wide ? _buildWide(theme) : _buildCompact();
             },
           ),
         ),
@@ -224,7 +233,7 @@ class _GamePageState extends State<GamePage> {
           Expanded(
             child: Column(
               children: [
-                TurnBanner(controller: _controller),
+                _watch(() => TurnBanner(controller: _controller)),
                 const SizedBox(height: 10),
                 Expanded(
                   child: BoardStage(
@@ -233,11 +242,13 @@ class _GamePageState extends State<GamePage> {
                   ),
                 ),
                 const SizedBox(height: 10),
-                GameActionBar(
-                  controller: _controller,
-                  onHint: _controller.requestHint,
-                  onUndo: _controller.undo,
-                  onRestart: _requestRestart,
+                _watch(
+                  () => GameActionBar(
+                    controller: _controller,
+                    onHint: _controller.requestHint,
+                    onUndo: _controller.undo,
+                    onRestart: _requestRestart,
+                  ),
                 ),
               ],
             ),
@@ -251,7 +262,9 @@ class _GamePageState extends State<GamePage> {
                 const SizedBox(height: 4),
                 Text('对局进度', style: theme.textTheme.titleSmall),
                 const SizedBox(height: 10),
-                PlayerStandings(controller: _controller, vertical: true),
+                _watch(
+                  () => PlayerStandings(controller: _controller, vertical: true),
+                ),
                 const Spacer(),
                 _Legend(theme: theme),
               ],
@@ -262,17 +275,17 @@ class _GamePageState extends State<GamePage> {
     );
   }
 
-  Widget _buildCompact(ThemeData theme) {
+  Widget _buildCompact() {
     return Column(
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
-          child: TurnBanner(controller: _controller),
+          child: _watch(() => TurnBanner(controller: _controller)),
         ),
         const SizedBox(height: 8),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: PlayerStandings(controller: _controller),
+          child: _watch(() => PlayerStandings(controller: _controller)),
         ),
         const SizedBox(height: 4),
         Expanded(
@@ -283,11 +296,13 @@ class _GamePageState extends State<GamePage> {
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 4, 12, 10),
-          child: GameActionBar(
-            controller: _controller,
-            onHint: _controller.requestHint,
-            onUndo: _controller.undo,
-            onRestart: _requestRestart,
+          child: _watch(
+            () => GameActionBar(
+              controller: _controller,
+              onHint: _controller.requestHint,
+              onUndo: _controller.undo,
+              onRestart: _requestRestart,
+            ),
           ),
         ),
       ],

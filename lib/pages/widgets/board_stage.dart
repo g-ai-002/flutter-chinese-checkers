@@ -34,7 +34,10 @@ class BoardStage extends StatelessWidget {
           child: SizedBox(
             width: width,
             height: height,
-            child: GameWidget<CheckersGame>(key: gameKey, game: game),
+            // 棋盘自成一棵重绘边界，周边面板刷新时不会连带重绘整块画布。
+            child: RepaintBoundary(
+              child: GameWidget<CheckersGame>(key: gameKey, game: game),
+            ),
           ),
         );
       },
