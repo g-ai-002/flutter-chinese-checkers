@@ -1,7 +1,7 @@
 name: chinese_checkers
 description: 中国跳棋 - 支持 2/3/4/6 人对局与人机对战，覆盖 Android、Windows 与 Web
 publish_to: 'none'
-version: 0.6.0
+version: 0.6.1
 
 environment:
   sdk: '>=3.13.7 <4.0.0'

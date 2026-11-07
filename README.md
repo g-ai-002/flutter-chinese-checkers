@@ -27,19 +27,20 @@
 - 🔔 音效与震动：运行时合成选子 / 单步 / 连跳 / 终局音效，仓库不携带音频文件
 - 🎵 背景音乐：运行时合成的五声音阶循环，可独立关闭，后台自动暂停
 - 🈶 Web 字体：使用 soup_fonts 思源黑体，仓库不存放字体文件
-- 📱 响应式布局：手机 / 折叠屏 / 平板 / Windows 窗口自适应
+- 🖼️ 全屏棋盘：对局主界面由棋盘独占，轮次 / 进度 / 操作 / 残局状态以四角悬浮 HUD 呈现，信息变化不推动棋盘
+- 📱 响应式布局：手机 / 折叠屏 / 平板 / Windows 窗口自适应，窄屏棋盘贴边显示，矮窗口自动收起进度列表
 - 🌓 深色模式、简体中文界面、Windows 优先使用 Microsoft YaHei UI
 - 🧾 日志按天写入用户目录，设置页可直接查看最近日志
 
 ## 下载
 
-v0.6.0（最新）：[Gitea Release](http://192.168.31.120:3020/GTech/flutter-chinese-checkers/releases/tag/v0.6.0)
+v0.6.1（最新）：[Gitea Release](http://192.168.31.120:3020/GTech/flutter-chinese-checkers/releases/tag/v0.6.1)
 
 | 平台 | 产物 |
 | --- | --- |
-| Android (arm64) | `flutter-chinese-checkers-0.6.0-android-aarch64.apk` |
-| Windows (x64, Win10+) | `flutter-chinese-checkers-0.6.0-windows-x86_64.zip` |
-| Web | `flutter-chinese-checkers-0.6.0-web.zip`（解压后起静态服务器） |
+| Android (arm64) | `flutter-chinese-checkers-0.6.1-android-aarch64.apk` |
+| Windows (x64, Win10+) | `flutter-chinese-checkers-0.6.1-windows-x86_64.zip` |
+| Web | `flutter-chinese-checkers-0.6.1-web.zip`（解压后起静态服务器） |
 
 ## 规则
 
@@ -85,8 +86,8 @@ lib/
 
 | 版本 | 说明 |
 | --- | --- |
+| v0.6.1 | 对局主界面空间优化：棋盘铺满可用区域，轮次 / 进度 / 操作改为四角悬浮且不推动布局 |
 | v0.6.0 | 新增残局挑战：9 道分档关卡、障碍棋子、限步通关、三星评级与逐关解锁 |
 | v0.5.3 | 性能与流畅度优化：空闲停帧、棋子层缓存、搜索零拷贝、启动并行化与日志异步落盘 |
 | v0.5.2 | 复盘逐手回看与自动播放保留走子动画，批量跳转直接切换局面 |
 | v0.5.1 | 重构棋谱存档：缓存原始行与解析结果，确认浮层统一，导入导出更省重复编码 |
-| v0.5.0 | 新增棋谱库：终局自动存档、分享码导入导出与逐手校验 |
