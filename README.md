@@ -28,20 +28,22 @@
 - 🔔 音效与震动：运行时合成选子 / 单步 / 连跳 / 终局音效，仓库不携带音频文件
 - 🎵 背景音乐：运行时合成的五声音阶循环，可独立关闭，后台自动暂停
 - 🈶 Web 字体：使用 soup_fonts 思源黑体，仓库不存放字体文件
-- 🖼️ 全屏棋盘：对局主界面由棋盘独占，轮次 / 进度 / 操作 / 残局状态以悬浮 HUD 呈现，信息变化不推动棋盘
-- 📱 设备自适应布局：竖屏把信息放进上下信息带，横屏与桌面贴到棋盘两侧，方块窗口退到四角且不遮挡任何棋子；窄屏操作坞收成图标，矮窗口自动收起进度列表
+- 🖼️ 居中棋盘：棋盘始终居中，轮次提示悬浮在棋盘上方，进度在左、工具在右，控制按钮固定在棋盘下方一行
+- 📱 设备自适应布局：竖屏把提示收进上下信息带，横屏与桌面贴到棋盘两侧，方块窗口退到四角且不遮挡任何棋子；窄屏操作坞收成图标，矮窗口自动收起进度列表
+- 🔄 方向策略：窄屏按网格比例判断——网格更适合横屏才横屏全屏，否则锁定竖屏，宽屏恢复自由旋转
+- 🧹 无残留任务：离开对局页即取消电脑思考、提示收起、复盘播放与棋盘空闲计时，退出应用停止背景音乐
 - 🌓 深色模式、简体中文界面、Windows 优先使用 Microsoft YaHei UI
 - 🧾 日志按天写入用户目录，设置页可直接查看最近日志
 
 ## 下载
 
-v0.6.3（最新）：[Gitea Release](http://192.168.31.120:3020/GTech/flutter-chinese-checkers/releases/tag/v0.6.3)
+v0.6.4（最新）：[Gitea Release](http://192.168.31.120:3020/GTech/flutter-chinese-checkers/releases/tag/v0.6.4)
 
 | 平台 | 产物 |
 | --- | --- |
-| Android (arm64) | `flutter-chinese-checkers-0.6.3-android-aarch64.apk` |
-| Windows (x64, Win10+) | `flutter-chinese-checkers-0.6.3-windows-x86_64.zip` |
-| Web | `flutter-chinese-checkers-0.6.3-web.zip`（解压后起静态服务器） |
+| Android (arm64) | `flutter-chinese-checkers-0.6.4-android-aarch64.apk` |
+| Windows (x64, Win10+) | `flutter-chinese-checkers-0.6.4-windows-x86_64.zip` |
+| Web | `flutter-chinese-checkers-0.6.4-web.zip`（解压后起静态服务器） |
 
 ## 规则
 
@@ -57,9 +59,12 @@ v0.6.3（最新）：[Gitea Release](http://192.168.31.120:3020/GTech/flutter-ch
 
 ```bash
 flutter pub get
+dart format --line-length=100 lib
 flutter analyze
 flutter test
 ```
+
+源码按 100 列格式化，便于在 10000 行的代码量预算内持续迭代。
 
 构建产物由 CI 生成：在 Gitea Actions / GitHub Actions 里手动运行 `build` 工作流，选中 `v*` Tag 时按该 Tag 的版本构建 Android / Windows / Web 并发布 Release，运行 `main` 则产出预览产物。音频在运行时合成、Web 字体来自 soup_fonts，仓库不存放字体与音频文件，本地无需安装 Android SDK 等大型工具链。
 
@@ -87,8 +92,8 @@ lib/
 
 | 版本 | 说明 |
 | --- | --- |
+| v0.6.4 | 布局与生命周期规范对齐：棋盘居中、控制按钮固定在下方、窄屏按网格比例定横竖屏，离开对局页不留后台任务 |
 | v0.6.3 | 逻辑更新速率 30 / 60 / 120 Hz 可选，默认 60 Hz；固定步长推进，卡顿帧最多补 8 步 |
 | v0.6.2 | 游戏界面显示优化：浮层按设备形态放上下带 / 左右侧栏 / 四角，不遮挡棋子；复盘走子前预高亮 |
 | v0.6.1 | 对局主界面空间优化：棋盘铺满可用区域，轮次 / 进度 / 操作改为四角悬浮且不推动布局 |
 | v0.6.0 | 新增残局挑战：9 道分档关卡、障碍棋子、限步通关、三星评级与逐关解锁 |
-| v0.5.3 | 性能与流畅度优化：空闲停帧、棋子层缓存、搜索零拷贝、启动并行化与日志异步落盘 |
