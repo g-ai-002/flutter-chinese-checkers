@@ -13,6 +13,7 @@ import '../models/replay_archive.dart';
 import '../providers/settings_provider.dart';
 import '../services/log_service.dart';
 import '../services/sound_service.dart';
+import '../utils/board_orientation.dart';
 import '../utils/constants.dart';
 import 'replay_page.dart';
 import 'widgets/board_stage.dart';
@@ -36,15 +37,13 @@ class _GamePageState extends State<GamePage> {
   late final CheckersGame _game;
   int _seenMoves = 0;
   bool _resultShown = false;
+  Size? _orientationSize;
 
   @override
   void initState() {
     super.initState();
     final settings = context.read<SettingsProvider>();
-    _controller = CheckersController(
-      setup: widget.setup,
-      allowUndo: !widget.setup.isChallenge,
-    );
+    _controller = CheckersController(setup: widget.setup, allowUndo: !widget.setup.isChallenge);
     _game = CheckersGame(
       source: _controller,
       theme: settings.boardTheme,
@@ -66,8 +65,20 @@ class _GamePageState extends State<GamePage> {
   @override
   void dispose() {
     _controller.removeListener(_onControllerChanged);
+    // 关掉对局页时一并收回方向控制并停掉棋盘渲染，不留后台任务。
+    BoardOrientation.restore();
+    _game.shutdown();
     _controller.dispose();
     super.dispose();
+  }
+
+  /// 窄屏按网格比例锁定横竖屏；尺寸变化时才请求平台，避免每帧调用。
+  void _syncOrientation(Size size) {
+    if (_orientationSize == size) return;
+    _orientationSize = size;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) BoardOrientation.apply(size);
+    });
   }
 
   void _onControllerChanged() {
@@ -99,9 +110,8 @@ class _GamePageState extends State<GamePage> {
   }
 
   void _openArchive(ReplayArchive archive) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => ReplayPage(archive: archive)),
-    );
+    Navigator.of(context)
+        .push(MaterialPageRoute<void>(builder: (_) => ReplayPage(archive: archive)));
   }
 
   /// 当前对局的完整棋谱，复盘与终局存档共用。
@@ -185,9 +195,7 @@ class _GamePageState extends State<GamePage> {
 
   void _openLevel(ChallengeLevel level) {
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute<void>(
-        builder: (_) => GamePage(setup: GameSetup.forChallenge(level)),
-      ),
+      MaterialPageRoute<void>(builder: (_) => GamePage(setup: GameSetup.forChallenge(level))),
     );
   }
 
@@ -219,10 +227,7 @@ class _GamePageState extends State<GamePage> {
 
   /// 只刷新依赖对局状态的小区域，棋盘画布不参与重建。
   Widget _watch(Widget Function() builder) {
-    return ListenableBuilder(
-      listenable: _controller,
-      builder: (context, _) => builder(),
-    );
+    return ListenableBuilder(listenable: _controller, builder: (context, _) => builder());
   }
 
   String get _title {
@@ -249,6 +254,7 @@ class _GamePageState extends State<GamePage> {
           child: LayoutBuilder(
             builder: (context, constraints) {
               final wide = constraints.maxWidth >= kGameWideBreakpoint;
+              _syncOrientation(constraints.biggest);
               final layout = GameLayout.resolve(
                 size: constraints.biggest,
                 challenge: challenge != null,
@@ -279,11 +285,7 @@ class _GamePageState extends State<GamePage> {
                             width: layout.titleWidth,
                             child: Row(
                               children: [
-                                HudButton(
-                                  icon: Icons.arrow_back,
-                                  tooltip: '返回',
-                                  onPressed: _leave,
-                                ),
+                                HudButton(icon: Icons.arrow_back, tooltip: '返回', onPressed: _leave),
                                 const SizedBox(width: 8),
                                 Flexible(
                                   child: HudPanel(
@@ -296,9 +298,7 @@ class _GamePageState extends State<GamePage> {
                                       _title,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleSmall,
+                                      style: Theme.of(context).textTheme.titleSmall,
                                     ),
                                   ),
                                 ),
@@ -338,12 +338,8 @@ class _GamePageState extends State<GamePage> {
                                 _watch(
                                   () => HudButton(
                                     icon: Icons.history,
-                                    tooltip: _controller.isFinished
-                                        ? '复盘'
-                                        : '复盘（终局后可查看）',
-                                    onPressed: _controller.isFinished
-                                        ? _openReplay
-                                        : null,
+                                    tooltip: _controller.isFinished ? '复盘' : '复盘（终局后可查看）',
+                                    onPressed: _controller.isFinished ? _openReplay : null,
                                   ),
                                 ),
                                 const SizedBox(width: 6),
@@ -361,8 +357,7 @@ class _GamePageState extends State<GamePage> {
                               icon: Icons.flag_outlined,
                               tooltip: '查看关卡目标',
                               label: '关卡目标',
-                              onPressed: () =>
-                                  showChallengeBriefDialog(context, challenge),
+                              onPressed: () => showChallengeBriefDialog(context, challenge),
                             ),
                           ],
                         ],
@@ -370,17 +365,14 @@ class _GamePageState extends State<GamePage> {
                     ),
                     if (challenge == null)
                       Positioned(
-                        left: layout.left,
+                        left: layout.progressLeft,
                         bottom: layout.bottom,
                         child: layout.progressButton
                             ? HudButton(
                                 key: const ValueKey('hud-progress'),
                                 icon: Icons.leaderboard_outlined,
                                 tooltip: '对局进度',
-                                onPressed: () => showPlayerProgressDialog(
-                                  context,
-                                  _controller,
-                                ),
+                                onPressed: () => showPlayerProgressDialog(context, _controller),
                               )
                             : _watch(
                                 () => PlayersHud(
@@ -392,7 +384,7 @@ class _GamePageState extends State<GamePage> {
                               ),
                       ),
                     Positioned(
-                      right: layout.rightBottom,
+                      left: layout.dockLeft,
                       bottom: layout.bottom,
                       child: _watch(
                         () => ActionDock(

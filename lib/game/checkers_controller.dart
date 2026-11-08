@@ -80,6 +80,10 @@ class CheckersController extends ChangeNotifier implements BoardSource {
   int _hintEpoch = 0;
   bool _disposed = false;
 
+  /// 电脑走子与提示消失的延时任务；关闭应用或离开对局时统一取消。
+  Timer? _aiTimer;
+  Timer? _hintTimer;
+
   List<MoveRecord> get records => List.unmodifiable(history);
 
   /// 残局只有己方一方走子，障碍子永远不轮到。
@@ -111,9 +115,8 @@ class CheckersController extends ChangeNotifier implements BoardSource {
   @visibleForTesting
   int get quietPlies => _quietPlies;
 
-  Duration get _elapsed => _startedAt == null
-      ? Duration.zero
-      : DateTime.now().difference(_startedAt!);
+  Duration get _elapsed =>
+      _startedAt == null ? Duration.zero : DateTime.now().difference(_startedAt!);
 
   Duration get duration => isFinished ? _duration : _elapsed;
 
@@ -123,8 +126,7 @@ class CheckersController extends ChangeNotifier implements BoardSource {
     return history.any((record) => record.seat == setup.humanSeat);
   }
 
-  int progressOf(int seat) =>
-      rules.progress(board, seat, setup.targetArmOf(seat));
+  int progressOf(int seat) => rules.progress(board, seat, setup.targetArmOf(seat));
 
   @override
   Map<int, CheckersMove> get targets => Map.unmodifiable(_movesByTarget);
@@ -201,9 +203,7 @@ class CheckersController extends ChangeNotifier implements BoardSource {
     board.move(move.from, move.to);
     history.add(MoveRecord(seat: currentSeat, move: move));
     // 长时间没有新棋子进营说明局面停滞，判和避免无休止消耗。
-    _quietPlies = progressOf(currentSeat) > progressBefore
-        ? 0
-        : _quietPlies + 1;
+    _quietPlies = progressOf(currentSeat) > progressBefore ? 0 : _quietPlies + 1;
     _clearSelection();
     hintMove = null;
     final mover = currentSeat;
@@ -264,7 +264,11 @@ class CheckersController extends ChangeNotifier implements BoardSource {
     final epoch = ++_epoch;
     isAiThinking = true;
     notifyListeners();
-    Future<void>.delayed(aiDelay, () => _playAiTurn(epoch));
+    _aiTimer?.cancel();
+    _aiTimer = Timer(aiDelay, () {
+      _aiTimer = null;
+      _playAiTurn(epoch);
+    });
   }
 
   /// 电脑回合：选子、记录搜索开销，并在无棋可走时跳过该座位。
@@ -294,6 +298,10 @@ class CheckersController extends ChangeNotifier implements BoardSource {
     if (!canUndo) return;
     _epoch++;
     _hintEpoch++;
+    _aiTimer?.cancel();
+    _aiTimer = null;
+    _hintTimer?.cancel();
+    _hintTimer = null;
     isAiThinking = false;
     while (_undoStack.isNotEmpty) {
       final snapshot = _undoStack.removeLast();
@@ -321,6 +329,10 @@ class CheckersController extends ChangeNotifier implements BoardSource {
   void restart() {
     _epoch++;
     _hintEpoch++;
+    _aiTimer?.cancel();
+    _aiTimer = null;
+    _hintTimer?.cancel();
+    _hintTimer = null;
     isAiThinking = false;
     _resetState();
     notifyListeners();
@@ -353,7 +365,9 @@ class CheckersController extends ChangeNotifier implements BoardSource {
     hintMove = move;
     final epoch = ++_hintEpoch;
     notifyListeners();
-    Future<void>.delayed(const Duration(seconds: 6), () {
+    _hintTimer?.cancel();
+    _hintTimer = Timer(const Duration(seconds: 6), () {
+      _hintTimer = null;
       if (_disposed || epoch != _hintEpoch) return;
       hintMove = null;
       notifyListeners();
@@ -365,6 +379,10 @@ class CheckersController extends ChangeNotifier implements BoardSource {
     _disposed = true;
     _epoch++;
     _hintEpoch++;
+    _aiTimer?.cancel();
+    _aiTimer = null;
+    _hintTimer?.cancel();
+    _hintTimer = null;
     super.dispose();
   }
 }

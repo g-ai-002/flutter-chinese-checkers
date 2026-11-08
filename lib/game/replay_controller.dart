@@ -62,11 +62,8 @@ class ReplayController extends ChangeNotifier implements BoardSource {
   final List<ReplayStep> _steps = [];
   final List<MoveRecord> _visible = [];
   int? _bestIndex;
-  late final UnmodifiableListView<MoveRecord> _historyView =
-      UnmodifiableListView(_visible);
-  late final UnmodifiableListView<ReplayStep> _stepsView = UnmodifiableListView(
-    _steps,
-  );
+  late final UnmodifiableListView<MoveRecord> _historyView = UnmodifiableListView(_visible);
+  late final UnmodifiableListView<ReplayStep> _stepsView = UnmodifiableListView(_steps);
 
   @override
   late CheckersBoard board;
@@ -76,6 +73,7 @@ class ReplayController extends ChangeNotifier implements BoardSource {
   int _epoch = 0;
   int _animationStart = 0;
   bool _disposed = false;
+  Timer? _tick;
 
   @override
   int get players => setup.players;
@@ -140,8 +138,7 @@ class ReplayController extends ChangeNotifier implements BoardSource {
       progressBySeat[record.seat] = progress;
       final gain = progress - before;
       final landedInCamp = geometry.armOf(record.move.to) == targetArm;
-      final score =
-          gain * 100 + record.move.jumpCount * 10 + (landedInCamp ? 5 : 0);
+      final score = gain * 100 + record.move.jumpCount * 10 + (landedInCamp ? 5 : 0);
       _steps.add(
         ReplayStep(
           record: record,
@@ -197,7 +194,9 @@ class ReplayController extends ChangeNotifier implements BoardSource {
 
   void _scheduleTick() {
     final epoch = ++_epoch;
-    Future<void>.delayed(playInterval, () {
+    _tick?.cancel();
+    _tick = Timer(playInterval, () {
+      _tick = null;
       if (_disposed || !_playing || epoch != _epoch) return;
       if (atEnd) {
         _playing = false;
@@ -211,6 +210,8 @@ class ReplayController extends ChangeNotifier implements BoardSource {
   }
 
   void _stopPlayback() {
+    _tick?.cancel();
+    _tick = null;
     if (!_playing) return;
     _playing = false;
     _epoch++;
@@ -255,6 +256,8 @@ class ReplayController extends ChangeNotifier implements BoardSource {
   void dispose() {
     _disposed = true;
     _epoch++;
+    _tick?.cancel();
+    _tick = null;
     super.dispose();
   }
 }

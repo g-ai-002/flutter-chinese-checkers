@@ -57,6 +57,7 @@ class _TiaoqiAppState extends State<TiaoqiApp> with WidgetsBindingObserver {
         unawaited(LogService.flush());
         break;
       case AppLifecycleState.detached:
+        unawaited(MusicService.stopForShutdown());
         unawaited(LogService.flush());
         break;
       case AppLifecycleState.inactive:
@@ -87,9 +88,7 @@ class _TiaoqiAppState extends State<TiaoqiApp> with WidgetsBindingObserver {
             // Web 首次点击用于解除浏览器的自动播放限制。
             builder: (context, child) => Listener(
               behavior: HitTestBehavior.translucent,
-              onPointerDown: kIsWeb
-                  ? (_) => MusicService.retryOnInteraction()
-                  : null,
+              onPointerDown: kIsWeb ? (_) => MusicService.retryOnInteraction() : null,
               child: child ?? const SizedBox.shrink(),
             ),
             home: const HomePage(),

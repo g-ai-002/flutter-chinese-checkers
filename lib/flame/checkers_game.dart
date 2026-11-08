@@ -64,8 +64,7 @@ class CheckersGame extends FlameGame {
   set theme(BoardTheme value) => _theme.value = value;
 
   /// 实时对局与复盘控制器都是 [ChangeNotifier]，监听后即可在交互时唤醒循环。
-  Listenable? get _listenableSource =>
-      source is Listenable ? source as Listenable : null;
+  Listenable? get _listenableSource => source is Listenable ? source as Listenable : null;
 
   bool get isIdlePaused => _idlePaused;
 
@@ -74,11 +73,7 @@ class CheckersGame extends FlameGame {
 
   @override
   Future<void> onLoad() async {
-    final board = BoardComponent(
-      source: source,
-      theme: _theme,
-      showHints: showHints,
-    );
+    final board = BoardComponent(source: source, theme: _theme, showHints: showHints);
     _board = board;
     await add(board);
     if (_removed) return;
@@ -136,12 +131,21 @@ class CheckersGame extends FlameGame {
 
   @override
   void onRemove() {
+    shutdown();
+    super.onRemove();
+  }
+
+  /// 关掉对局页时立即停下渲染循环与空闲计时器，不留后台任务。
+  ///
+  /// 重复调用安全：页面销毁与 Flame 的移除回调可能先后到达。
+  void shutdown() {
+    if (_removed) return;
     _removed = true;
     _idleTimer?.cancel();
     _idleTimer = null;
+    if (!paused) pauseEngine();
     _listenableSource?.removeListener(_onActivity);
     _theme.removeListener(_onActivity);
     _theme.dispose();
-    super.onRemove();
   }
 }

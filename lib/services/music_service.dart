@@ -35,9 +35,7 @@ class MusicService {
       target(true);
       return;
     }
-    if (!_failed &&
-        _handle != null &&
-        SoLoud.instance.getIsValidVoiceHandle(_handle!)) {
+    if (!_failed && _handle != null && SoLoud.instance.getIsValidVoiceHandle(_handle!)) {
       return;
     }
     final starting = _starting;
@@ -124,6 +122,12 @@ class MusicService {
       }
     }
     unawaited(start());
+  }
+
+  /// 应用退出时彻底停止播放，不留后台音频任务。
+  static Future<void> stopForShutdown() async {
+    _suspended = false;
+    await _stop();
   }
 
   static Future<void> _stop() async {
