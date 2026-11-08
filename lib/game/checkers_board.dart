@@ -16,10 +16,7 @@ class CheckersBoard {
   }
 
   /// 仅供测试与存档：从「孔位 -> 座位」列表恢复。
-  factory CheckersBoard.fromPieces(
-    BoardGeometry geometry,
-    Map<int, int> pieces,
-  ) {
+  factory CheckersBoard.fromPieces(BoardGeometry geometry, Map<int, int> pieces) {
     final cells = List<int>.filled(geometry.length, -1);
     pieces.forEach((hole, seat) => cells[hole] = seat);
     return CheckersBoard(cells);

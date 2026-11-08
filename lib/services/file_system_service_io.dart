@@ -25,9 +25,7 @@ class FileSystemService {
     if (_logRoot != null) return _logRoot!;
     final base = await _baseDir();
     final separator = Platform.pathSeparator;
-    final logDir = Directory(
-      '${base.path}${separator}FlutterTiaoqi${separator}logs',
-    );
+    final logDir = Directory('${base.path}${separator}FlutterTiaoqi${separator}logs');
     if (!await logDir.exists()) await logDir.create(recursive: true);
     _logRoot = logDir;
     return logDir;
@@ -40,9 +38,7 @@ class FileSystemService {
     try {
       final base = await _baseDir();
       final separator = Platform.pathSeparator;
-      final dir = Directory(
-        '${base.path}${separator}FlutterTiaoqi${separator}replays',
-      );
+      final dir = Directory('${base.path}${separator}FlutterTiaoqi${separator}replays');
       if (!await dir.exists()) await dir.create(recursive: true);
       final file = File('${dir.path}$separator$fileName');
       await file.writeAsString(content);

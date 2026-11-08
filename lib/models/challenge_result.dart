@@ -1,10 +1,6 @@
 /// 一道残局的最佳成绩：星级越高越好，同星级步数越少越好。
 class ChallengeResult {
-  const ChallengeResult({
-    required this.levelId,
-    required this.stars,
-    required this.moves,
-  });
+  const ChallengeResult({required this.levelId, required this.stars, required this.moves});
 
   final String levelId;
   final int stars;
@@ -13,11 +9,7 @@ class ChallengeResult {
   bool beats(ChallengeResult other) =>
       stars > other.stars || (stars == other.stars && moves < other.moves);
 
-  Map<String, Object> toJson() => {
-    'id': levelId,
-    'stars': stars,
-    'moves': moves,
-  };
+  Map<String, Object> toJson() => {'id': levelId, 'stars': stars, 'moves': moves};
 
   /// 严格解析持久化数据，损坏或缺字段时返回 null。
   static ChallengeResult? tryParse(Object? json) {

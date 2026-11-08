@@ -23,11 +23,7 @@ const double _holeRadius = 0.44;
 
 /// Flame 棋盘组件：绘制六角星棋盘、棋子、可走提示与走子动画，并处理点击。
 class BoardComponent extends PositionComponent with TapCallbacks {
-  BoardComponent({
-    required this.source,
-    required this.theme,
-    required this.showHints,
-  });
+  BoardComponent({required this.source, required this.theme, required this.showHints});
 
   final BoardSource source;
   final ValueListenable<BoardTheme> theme;
@@ -137,10 +133,7 @@ class BoardComponent extends PositionComponent with TapCallbacks {
   @override
   void render(Canvas canvas) {
     if (size.x <= 0 || size.y <= 0) return;
-    final scale = math.min(
-      size.x / (_contentHalfWidth * 2),
-      size.y / (_contentHalfHeight * 2),
-    );
+    final scale = math.min(size.x / (_contentHalfWidth * 2), size.y / (_contentHalfHeight * 2));
     if (scale <= 0) return;
     _scale = scale;
     _origin = Offset(size.x / 2, size.y / 2);
@@ -204,8 +197,7 @@ class BoardComponent extends PositionComponent with TapCallbacks {
     final palette = theme.value;
     final path = Path();
     path.addPolygon(<Offset>[
-      for (final p in BoardGeometry.starOutline())
-        Offset(p[0] * scale, p[1] * scale),
+      for (final p in BoardGeometry.starOutline()) Offset(p[0] * scale, p[1] * scale),
     ], true);
 
     canvas.drawPath(
@@ -218,11 +210,10 @@ class BoardComponent extends PositionComponent with TapCallbacks {
     canvas.drawPath(
       path,
       Paint()
-        ..shader = ui.Gradient.linear(
-          Offset(0, -scale * 7),
-          Offset(0, scale * 7),
-          [palette.plateTop, palette.plateBottom],
-        ),
+        ..shader = ui.Gradient.linear(Offset(0, -scale * 7), Offset(0, scale * 7), [
+          palette.plateTop,
+          palette.plateBottom,
+        ]),
     );
     canvas.drawPath(
       path,
@@ -240,11 +231,7 @@ class BoardComponent extends PositionComponent with TapCallbacks {
     );
     // 顶部一抹柔光，让深色底板不至于发闷。
     canvas.drawOval(
-      Rect.fromCenter(
-        center: Offset(0, -scale * 4.4),
-        width: scale * 12,
-        height: scale * 5.4,
-      ),
+      Rect.fromCenter(center: Offset(0, -scale * 4.4), width: scale * 12, height: scale * 5.4),
       Paint()
         ..shader = ui.Gradient.radial(Offset(0, -scale * 4.4), scale * 6, [
           Colors.white.withValues(alpha: 0.10),
@@ -347,9 +334,7 @@ class BoardComponent extends PositionComponent with TapCallbacks {
     if (seat < 0) return;
     final style = playerStyleOf(seat);
     final center = _point(anim.move.from);
-    final lead = anim.leadIn <= 0
-        ? 1.0
-        : (anim.elapsed / anim.leadIn).clamp(0.0, 1.0);
+    final lead = anim.leadIn <= 0 ? 1.0 : (anim.elapsed / anim.leadIn).clamp(0.0, 1.0);
     final pulse = 0.5 - 0.5 * math.cos(lead * math.pi * 2.4);
     canvas.drawCircle(
       center,
@@ -446,14 +431,8 @@ class BoardComponent extends PositionComponent with TapCallbacks {
     final head = _scale * 0.24;
     final path = Path()
       ..moveTo(tip.dx, tip.dy)
-      ..lineTo(
-        tip.dx - head * math.cos(angle - 0.45),
-        tip.dy - head * math.sin(angle - 0.45),
-      )
-      ..lineTo(
-        tip.dx - head * math.cos(angle + 0.45),
-        tip.dy - head * math.sin(angle + 0.45),
-      )
+      ..lineTo(tip.dx - head * math.cos(angle - 0.45), tip.dy - head * math.sin(angle - 0.45))
+      ..lineTo(tip.dx - head * math.cos(angle + 0.45), tip.dy - head * math.sin(angle + 0.45))
       ..close();
     canvas.drawPath(path, Paint()..color = color);
   }
@@ -612,10 +591,7 @@ class BoardComponent extends PositionComponent with TapCallbacks {
     final raw = Offset(event.localPosition.x, event.localPosition.y) - _origin;
     final cos = math.cos(-_rotation);
     final sin = math.sin(-_rotation);
-    final local = Offset(
-      raw.dx * cos - raw.dy * sin,
-      raw.dx * sin + raw.dy * cos,
-    );
+    final local = Offset(raw.dx * cos - raw.dy * sin, raw.dx * sin + raw.dy * cos);
     var best = -1;
     var bestDistance = double.infinity;
     for (final hole in _geometry.holes) {

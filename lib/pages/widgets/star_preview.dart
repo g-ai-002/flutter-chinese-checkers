@@ -35,8 +35,7 @@ class _StarPreviewPainter extends CustomPainter {
       ..translate(size.width / 2, size.height / 2);
     final path = Path()
       ..addPolygon([
-        for (final p in BoardGeometry.starOutline())
-          Offset(p[0] * scale, p[1] * scale),
+        for (final p in BoardGeometry.starOutline()) Offset(p[0] * scale, p[1] * scale),
       ], true);
     canvas.drawPath(
       path.shift(Offset(0, scale * 0.18)),
@@ -47,11 +46,10 @@ class _StarPreviewPainter extends CustomPainter {
     canvas.drawPath(
       path,
       Paint()
-        ..shader = ui.Gradient.linear(
-          Offset(0, -scale * 7),
-          Offset(0, scale * 7),
-          [theme.plateTop, theme.plateBottom],
-        ),
+        ..shader = ui.Gradient.linear(Offset(0, -scale * 7), Offset(0, scale * 7), [
+          theme.plateTop,
+          theme.plateBottom,
+        ]),
     );
     canvas.drawPath(
       path,
@@ -82,6 +80,5 @@ class _StarPreviewPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_StarPreviewPainter oldDelegate) =>
-      oldDelegate.theme.id != theme.id;
+  bool shouldRepaint(_StarPreviewPainter oldDelegate) => oldDelegate.theme.id != theme.id;
 }

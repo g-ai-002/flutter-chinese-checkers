@@ -21,9 +21,7 @@ class ChallengePage extends StatelessWidget {
         actions: [
           IconButton(
             tooltip: '重置进度',
-            onPressed: settings.challengeCompleted == 0
-                ? null
-                : () => _reset(context, settings),
+            onPressed: settings.challengeCompleted == 0 ? null : () => _reset(context, settings),
             icon: const Icon(Icons.restart_alt, size: 21),
           ),
           const SizedBox(width: 6),
@@ -61,10 +59,8 @@ class ChallengePage extends StatelessWidget {
           Text(
             '障碍子不会移动，但可以跨越。填满目标营地即通关，步数越少星级越高。',
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-              height: 1.6,
-            ),
+            style: Theme.of(context).textTheme.bodySmall
+                ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant, height: 1.6),
           ),
         ],
       ),
@@ -73,13 +69,11 @@ class ChallengePage extends StatelessWidget {
 
   List<({ChallengeLevel level, int index})> _levelsOf(ChallengeTier tier) => [
     for (var i = 0; i < kChallengeLevels.length; i++)
-      if (kChallengeLevels[i].tier == tier)
-        (level: kChallengeLevels[i], index: i),
+      if (kChallengeLevels[i].tier == tier) (level: kChallengeLevels[i], index: i),
   ];
 
   bool _unlocked(int index, SettingsProvider settings) =>
-      index == 0 ||
-      settings.challengeResults.containsKey(kChallengeLevels[index - 1].id);
+      index == 0 || settings.challengeResults.containsKey(kChallengeLevels[index - 1].id);
 
   Future<void> _start(BuildContext context, ChallengeLevel level) async {
     final setup = GameSetup.forChallenge(level);
@@ -123,11 +117,7 @@ class _SummaryCard extends StatelessWidget {
               color: theme.colorScheme.primary.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(13),
             ),
-            child: Icon(
-              Icons.flag_outlined,
-              color: theme.colorScheme.primary,
-              size: 23,
-            ),
+            child: Icon(Icons.flag_outlined, color: theme.colorScheme.primary, size: 23),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -141,11 +131,7 @@ class _SummaryCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    const Icon(
-                      Icons.star_rounded,
-                      size: 16,
-                      color: Color(0xFFE0A526),
-                    ),
+                    const Icon(Icons.star_rounded, size: 16, color: Color(0xFFE0A526)),
                     const SizedBox(width: 3),
                     Text(
                       '$stars / ${settings.maxChallengeStars} 星',
@@ -160,9 +146,7 @@ class _SummaryCard extends StatelessWidget {
           ),
           Text(
             '逐关解锁',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
+            style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
           ),
         ],
       ),
@@ -188,9 +172,7 @@ class _LevelTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final accent = unlocked
-        ? theme.colorScheme.primary
-        : theme.colorScheme.onSurfaceVariant;
+    final accent = unlocked ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant;
     return Material(
       color: theme.colorScheme.surface,
       borderRadius: BorderRadius.circular(14),

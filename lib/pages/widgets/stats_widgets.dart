@@ -191,9 +191,7 @@ class AiRecordPanel extends StatelessWidget {
       child: summary.aiGames == 0
           ? Text(
               '还没有和电脑交手，去首页开一局人机对战吧。',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: colors.onSurfaceVariant,
-              ),
+              style: theme.textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
             )
           : Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -217,27 +215,13 @@ class AiRecordPanel extends StatelessWidget {
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    _RecordLegend(
-                      color: colors.primary,
-                      label: '胜',
-                      value: summary.wins,
-                    ),
-                    _RecordLegend(
-                      color: colors.outlineVariant,
-                      label: '平',
-                      value: summary.draws,
-                    ),
-                    _RecordLegend(
-                      color: colors.error,
-                      label: '负',
-                      value: summary.losses,
-                    ),
+                    _RecordLegend(color: colors.primary, label: '胜', value: summary.wins),
+                    _RecordLegend(color: colors.outlineVariant, label: '平', value: summary.draws),
+                    _RecordLegend(color: colors.error, label: '负', value: summary.losses),
                     const Spacer(),
                     Text(
                       '胜率 ${summary.winPercent}%',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
                     ),
                   ],
                 ),
@@ -248,11 +232,7 @@ class AiRecordPanel extends StatelessWidget {
 }
 
 class _RecordLegend extends StatelessWidget {
-  const _RecordLegend({
-    required this.color,
-    required this.label,
-    required this.value,
-  });
+  const _RecordLegend({required this.color, required this.label, required this.value});
 
   final Color color;
   final String label;
@@ -274,9 +254,7 @@ class _RecordLegend extends StatelessWidget {
           const SizedBox(width: 5),
           Text(
             '$label $value',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
+            style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
           ),
         ],
       ),
@@ -300,9 +278,7 @@ class StatsHighlightsPanel extends StatelessWidget {
           _HighlightRow(
             icon: Icons.bolt,
             label: '人机最快获胜',
-            value: summary.fastestWinMoves == null
-                ? '—'
-                : '${summary.fastestWinMoves} 步',
+            value: summary.fastestWinMoves == null ? '—' : '${summary.fastestWinMoves} 步',
           ),
           _HighlightRow(
             icon: Icons.auto_awesome,
@@ -320,9 +296,7 @@ class StatsHighlightsPanel extends StatelessWidget {
           _HighlightRow(
             icon: Icons.speed,
             label: '入营效率',
-            value: efficiency == null
-                ? '—'
-                : '${efficiency.toStringAsFixed(1)} 步/子',
+            value: efficiency == null ? '—' : '${efficiency.toStringAsFixed(1)} 步/子',
             note: efficiency == null ? null : '获胜方平均每子步数',
             last: true,
           ),
@@ -354,9 +328,7 @@ class _HighlightRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
-        border: last
-            ? null
-            : Border(bottom: BorderSide(color: colors.outlineVariant)),
+        border: last ? null : Border(bottom: BorderSide(color: colors.outlineVariant)),
       ),
       child: Row(
         children: [
@@ -378,12 +350,7 @@ class _HighlightRow extends StatelessWidget {
               ],
             ),
           ),
-          Text(
-            value,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
-          ),
+          Text(value, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700)),
         ],
       ),
     );
@@ -403,13 +370,9 @@ class RecentMatchesPanel extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 6),
       trailing: Text(
         '最近 ${records.length} 场',
-        style: theme.textTheme.bodySmall?.copyWith(
-          color: theme.colorScheme.onSurfaceVariant,
-        ),
+        style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
       ),
-      child: Column(
-        children: [for (final record in records) _MatchTile(record: record)],
-      ),
+      child: Column(children: [for (final record in records) _MatchTile(record: record)]),
     );
   }
 }
@@ -464,9 +427,7 @@ class _MatchTile extends StatelessWidget {
                   meta.toString(),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w500,
-                  ),
+                  style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
                 ),
                 const SizedBox(height: 2),
                 Text(

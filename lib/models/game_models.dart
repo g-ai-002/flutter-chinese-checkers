@@ -73,8 +73,7 @@ enum PlayerCount {
   /// 每个座位对应的营地（棋盘六个角之一），两两相对时对局最公平。
   final List<int> seatArms;
 
-  static PlayerCount byCount(int? count) =>
-      tryByCount(count) ?? PlayerCount.two;
+  static PlayerCount byCount(int? count) => tryByCount(count) ?? PlayerCount.two;
 
   /// 严格按人数查找，未知人数返回 null（用于校验外部数据）。
   static PlayerCount? tryByCount(int? count) {
@@ -106,11 +105,8 @@ class GameSetup {
   final ChallengeLevel? challenge;
 
   /// 残局使用双人座位表把己方营地转到下方，但只有 0 号座位走子。
-  factory GameSetup.forChallenge(ChallengeLevel level) => GameSetup(
-    mode: PlayMode.vsAi,
-    playerCount: PlayerCount.two,
-    challenge: level,
-  );
+  factory GameSetup.forChallenge(ChallengeLevel level) =>
+      GameSetup(mode: PlayMode.vsAi, playerCount: PlayerCount.two, challenge: level);
 
   int get players => playerCount.count;
 
@@ -118,11 +114,9 @@ class GameSetup {
 
   bool get isChallenge => challenge != null;
 
-  bool isAi(int seat) =>
-      !isChallenge && mode == PlayMode.vsAi && seat != humanSeat;
+  bool isAi(int seat) => !isChallenge && mode == PlayMode.vsAi && seat != humanSeat;
 
-  bool isHuman(int seat) =>
-      isChallenge || mode == PlayMode.local || seat == humanSeat;
+  bool isHuman(int seat) => isChallenge || mode == PlayMode.local || seat == humanSeat;
 
   int targetArmOf(int seat) => (seatArms[seat] + 3) % 6;
 

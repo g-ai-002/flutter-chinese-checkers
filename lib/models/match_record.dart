@@ -52,30 +52,21 @@ class MatchRecord {
 
   /// 从偏好存储的 JSON 恢复；字段缺失或越界时回退到安全值。
   factory MatchRecord.fromJson(Map<String, dynamic> json) {
-    final playerCount = PlayerCount.byCount(
-      (json['playerCount'] as num?)?.toInt(),
-    );
+    final playerCount = PlayerCount.byCount((json['playerCount'] as num?)?.toInt());
     final rawWinner = (json['winner'] as num?)?.toInt();
-    final winner =
-        rawWinner != null && rawWinner >= 0 && rawWinner < playerCount.count
+    final winner = rawWinner != null && rawWinner >= 0 && rawWinner < playerCount.count
         ? rawWinner
         : null;
     final humanSeat = (json['humanSeat'] as num?)?.toInt() ?? 0;
     return MatchRecord(
-      playedAt:
-          DateTime.tryParse(json['playedAt'] as String? ?? '') ??
-          DateTime.now(),
+      playedAt: DateTime.tryParse(json['playedAt'] as String? ?? '') ?? DateTime.now(),
       mode: PlayMode.tryByName(json['mode']) ?? PlayMode.local,
       playerCount: playerCount,
       difficulty: Difficulty.byName(json['difficulty'] as String?),
-      humanSeat: humanSeat >= 0 && humanSeat < playerCount.count
-          ? humanSeat
-          : 0,
+      humanSeat: humanSeat >= 0 && humanSeat < playerCount.count ? humanSeat : 0,
       winner: winner,
       moves: math.max((json['moves'] as num?)?.toInt() ?? 0, 0),
-      duration: Duration(
-        milliseconds: math.max((json['durationMs'] as num?)?.toInt() ?? 0, 0),
-      ),
+      duration: Duration(milliseconds: math.max((json['durationMs'] as num?)?.toInt() ?? 0, 0)),
       longestJump: math.max((json['longestJump'] as num?)?.toInt() ?? 0, 0),
       opening: json['opening'] as String? ?? '',
       winnerMoves: math.max((json['winnerMoves'] as num?)?.toInt() ?? 0, 0),
@@ -109,12 +100,8 @@ class MatchRecord {
   /// 获胜方走子的手数，配合 10 枚棋子计算入营效率。
   final int winnerMoves;
 
-  GameSetup get setup => GameSetup(
-    mode: mode,
-    playerCount: playerCount,
-    difficulty: difficulty,
-    humanSeat: humanSeat,
-  );
+  GameSetup get setup =>
+      GameSetup(mode: mode, playerCount: playerCount, difficulty: difficulty, humanSeat: humanSeat);
 
   bool get isDraw => winner == null;
 

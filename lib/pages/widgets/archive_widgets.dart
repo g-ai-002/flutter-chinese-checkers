@@ -90,11 +90,7 @@ class ReplayArchiveTile extends StatelessWidget {
                   color: theme.colorScheme.primary.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(
-                  Icons.history,
-                  size: 21,
-                  color: theme.colorScheme.primary,
-                ),
+                child: Icon(Icons.history, size: 21, color: theme.colorScheme.primary),
               ),
               const SizedBox(width: 12),
               Expanded(

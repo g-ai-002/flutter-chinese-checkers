@@ -58,8 +58,7 @@ class ReplayArchive {
 
   String get outcomeLabel => setup.outcomeLabelFor(winner);
 
-  int get longestJump =>
-      records.fold(0, (best, record) => math.max(best, record.move.jumpCount));
+  int get longestJump => records.fold(0, (best, record) => math.max(best, record.move.jumpCount));
 
   /// 列表与导出用的标题，例如「2 人 · 人机对战」。
   String get title => '${setup.playerCount.label} · ${setup.mode.label}';
@@ -95,19 +94,13 @@ class ReplayArchive {
     try {
       final raw = jsonDecode(payload);
       if (raw is! Map) return null;
-      return _fromJson(
-        Map<String, dynamic>.from(raw),
-        verifyMoves: verifyMoves,
-      );
+      return _fromJson(Map<String, dynamic>.from(raw), verifyMoves: verifyMoves);
     } catch (_) {
       return null;
     }
   }
 
-  static ReplayArchive? _fromJson(
-    Map<String, dynamic> json, {
-    required bool verifyMoves,
-  }) {
+  static ReplayArchive? _fromJson(Map<String, dynamic> json, {required bool verifyMoves}) {
     if (json['kind'] != formatTag) return null;
     final version = (json['version'] as num?)?.toInt();
     if (version == null || version < 1 || version > formatVersion) return null;
@@ -127,13 +120,10 @@ class ReplayArchive {
 
     if (verifyMoves && !_isLegalSequence(setup, records, winner)) return null;
 
-    final savedAt =
-        DateTime.tryParse(json['savedAt'] as String? ?? '') ?? DateTime.now();
+    final savedAt = DateTime.tryParse(json['savedAt'] as String? ?? '') ?? DateTime.now();
     final id = json['id'];
     return ReplayArchive(
-      id: id is String && id.isNotEmpty
-          ? id
-          : '${savedAt.microsecondsSinceEpoch}',
+      id: id is String && id.isNotEmpty ? id : '${savedAt.microsecondsSinceEpoch}',
       savedAt: savedAt,
       setup: setup,
       winner: winner,
@@ -144,9 +134,7 @@ class ReplayArchive {
 
   /// 对局设置：人数、模式、难度与人类座位都必须落在合法范围内。
   static GameSetup? _setupOf(Map<String, dynamic> json) {
-    final playerCount = PlayerCount.tryByCount(
-      (json['playerCount'] as num?)?.toInt(),
-    );
+    final playerCount = PlayerCount.tryByCount((json['playerCount'] as num?)?.toInt());
     final mode = PlayMode.tryByName(json['mode']);
     if (playerCount == null || mode == null) return null;
     final humanSeat = (json['humanSeat'] as num?)?.toInt() ?? 0;
@@ -200,18 +188,12 @@ class ReplayArchive {
     if (!jump && path.length != 1) return null;
     return MoveRecord(
       seat: seat,
-      move: jump
-          ? CheckersMove.jump(from, path)
-          : CheckersMove.step(from, path.first),
+      move: jump ? CheckersMove.jump(from, path) : CheckersMove.step(from, path.first),
     );
   }
 
   /// 从头重放一遍，确认每一手都由该座位合法走出，胜者也确实进营。
-  static bool _isLegalSequence(
-    GameSetup setup,
-    List<MoveRecord> records,
-    int? winner,
-  ) {
+  static bool _isLegalSequence(GameSetup setup, List<MoveRecord> records, int? winner) {
     final geometry = BoardGeometry.star();
     final rules = CheckersRules(geometry);
     final board = CheckersBoard.initial(geometry, setup.seatArms);
@@ -227,8 +209,7 @@ class ReplayArchive {
       if (!legal) return false;
       board.move(record.move.from, record.move.to);
     }
-    if (winner != null &&
-        !rules.hasWon(board, winner, setup.targetArmOf(winner))) {
+    if (winner != null && !rules.hasWon(board, winner, setup.targetArmOf(winner))) {
       return false;
     }
     return true;

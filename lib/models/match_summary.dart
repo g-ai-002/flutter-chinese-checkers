@@ -64,9 +64,7 @@ class MatchSummary {
         } else if (record.humanWon) {
           wins++;
           final fastest = fastestWinMoves;
-          fastestWinMoves = fastest == null
-              ? record.moves
-              : math.min(fastest, record.moves);
+          fastestWinMoves = fastest == null ? record.moves : math.min(fastest, record.moves);
         } else {
           losses++;
         }
@@ -108,9 +106,7 @@ class MatchSummary {
       longestJump: longestJump,
       favoriteOpening: favoriteOpening,
       favoriteOpeningCount: favoriteOpeningCount,
-      entryEfficiency: efficiencyCount == 0
-          ? null
-          : efficiencySum / efficiencyCount,
+      entryEfficiency: efficiencyCount == 0 ? null : efficiencySum / efficiencyCount,
     );
   }
 

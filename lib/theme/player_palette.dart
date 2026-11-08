@@ -62,5 +62,4 @@ const List<PlayerStyle> kPlayerStyles = [
   ),
 ];
 
-PlayerStyle playerStyleOf(int seat) =>
-    kPlayerStyles[seat % kPlayerStyles.length];
+PlayerStyle playerStyleOf(int seat) => kPlayerStyles[seat % kPlayerStyles.length];

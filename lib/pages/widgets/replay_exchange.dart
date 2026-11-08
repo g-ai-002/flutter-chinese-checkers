@@ -7,10 +7,7 @@ import '../../services/file_system_service.dart';
 import '../../utils/formatters.dart';
 
 /// 导出棋谱：展示分享码，可复制或另存为文本文件。
-Future<void> showReplayExportDialog(
-  BuildContext context,
-  ReplayArchive archive,
-) {
+Future<void> showReplayExportDialog(BuildContext context, ReplayArchive archive) {
   return showDialog<void>(
     context: context,
     builder: (dialogContext) => _ReplayExportDialog(archive: archive),
@@ -55,8 +52,7 @@ class _ReplayExportDialogState extends State<_ReplayExportDialog> {
   Future<void> _copy() async {
     await Clipboard.setData(ClipboardData(text: _shareCode));
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('分享码已复制')));
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('分享码已复制')));
   }
 
   @override
@@ -72,9 +68,7 @@ class _ReplayExportDialogState extends State<_ReplayExportDialog> {
           children: [
             Text(
               '把分享码发给朋友，或在棋谱库里粘贴导入，即可回看同一局。',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
+              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             ),
             const SizedBox(height: 10),
             Container(
@@ -87,11 +81,7 @@ class _ReplayExportDialogState extends State<_ReplayExportDialog> {
               child: SingleChildScrollView(
                 child: SelectableText(
                   _shareCode,
-                  style: const TextStyle(
-                    fontFamily: 'monospace',
-                    fontSize: 11,
-                    height: 1.5,
-                  ),
+                  style: const TextStyle(fontFamily: 'monospace', fontSize: 11, height: 1.5),
                 ),
               ),
             ),
@@ -99,9 +89,7 @@ class _ReplayExportDialogState extends State<_ReplayExportDialog> {
               const SizedBox(height: 10),
               Text(
                 '已保存到本机：$_savedPath',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.primary,
-                ),
+                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.primary),
               ),
             ],
           ],
@@ -119,10 +107,7 @@ class _ReplayExportDialogState extends State<_ReplayExportDialog> {
           icon: const Icon(Icons.copy_all_outlined, size: 18),
           label: const Text('复制'),
         ),
-        FilledButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('完成'),
-        ),
+        FilledButton(onPressed: () => Navigator.of(context).pop(), child: const Text('完成')),
       ],
     );
   }
@@ -183,9 +168,7 @@ class _ReplayImportDialogState extends State<_ReplayImportDialog> {
           children: [
             Text(
               '粘贴 `TIAOQI1:` 开头的分享码，导入后可直接复盘。',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
+              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             ),
             const SizedBox(height: 10),
             TextField(
@@ -210,10 +193,7 @@ class _ReplayImportDialogState extends State<_ReplayImportDialog> {
           icon: const Icon(Icons.content_paste, size: 18),
           label: const Text('粘贴'),
         ),
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('取消'),
-        ),
+        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('取消')),
         FilledButton(onPressed: _submit, child: const Text('导入')),
       ],
     );

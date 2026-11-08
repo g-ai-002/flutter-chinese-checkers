@@ -70,11 +70,7 @@ class CheckersAi {
   /// 一步进营即可获胜的着法；没有则返回 null。
   ///
   /// 直接在传入局面上落子再回退，避免为每个候选复制整块棋盘。
-  CheckersMove? _winningMove(
-    CheckersBoard board,
-    int seat,
-    List<CheckersMove> moves,
-  ) {
+  CheckersMove? _winningMove(CheckersBoard board, int seat, List<CheckersMove> moves) {
     final target = _heuristics.targetOf(seat);
     for (final move in moves) {
       if (_heuristics.armOf(move.to) != target) continue;
@@ -117,11 +113,7 @@ class CheckersAi {
       }
     }
 
-    lastSearch = AiSearchStats(
-      nodes: budget.nodes,
-      depth: _depth,
-      candidates: roots.length,
-    );
+    lastSearch = AiSearchStats(nodes: budget.nodes, depth: _depth, candidates: roots.length);
     return best.move;
   }
 
@@ -129,11 +121,7 @@ class CheckersAi {
   ///
   /// 堵空位通常是后退，静态估值很差，只按排名会被提前裁掉；
   /// 但它可能是唯一避免对手一步获胜的选择。
-  List<_RatedMove> _rootCandidates(
-    CheckersBoard board,
-    int seat,
-    List<_RatedMove> rated,
-  ) {
+  List<_RatedMove> _rootCandidates(CheckersBoard board, int seat, List<_RatedMove> rated) {
     final roots = rated.take(rootBranch).toList();
     final critical = _criticalSlots(board, seat);
     if (critical.isEmpty) return roots;
@@ -255,11 +243,7 @@ class CheckersAi {
   ///
   /// 评分时在同一个局面上落子再回退，搜索期间不再复制棋盘；
   /// 调用结束后 [board] 与传入时完全一致。
-  List<_RatedMove> _rate(
-    CheckersBoard board,
-    List<CheckersMove> moves,
-    int seat,
-  ) {
+  List<_RatedMove> _rate(CheckersBoard board, List<CheckersMove> moves, int seat) {
     final rated = <_RatedMove>[];
     for (final move in moves) {
       board.move(move.from, move.to);
@@ -273,11 +257,7 @@ class CheckersAi {
 }
 
 class AiSearchStats {
-  const AiSearchStats({
-    required this.nodes,
-    required this.depth,
-    required this.candidates,
-  });
+  const AiSearchStats({required this.nodes, required this.depth, required this.candidates});
 
   final int nodes;
   final int depth;

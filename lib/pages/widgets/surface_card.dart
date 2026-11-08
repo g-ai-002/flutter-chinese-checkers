@@ -39,9 +39,7 @@ class SurfaceCard extends StatelessWidget {
             if (heading != null) ...[
               Row(
                 children: [
-                  Expanded(
-                    child: Text(heading, style: theme.textTheme.titleSmall),
-                  ),
+                  Expanded(child: Text(heading, style: theme.textTheme.titleSmall)),
                   ?trailing,
                 ],
               ),

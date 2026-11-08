@@ -40,9 +40,7 @@ class HomePage extends StatelessWidget {
           child: LayoutBuilder(
             builder: (context, constraints) {
               final wide = constraints.maxWidth >= kHomeWideBreakpoint;
-              final horizontal = constraints.maxWidth >= kHomePaddingBreakpoint
-                  ? 36.0
-                  : 20.0;
+              final horizontal = constraints.maxWidth >= kHomePaddingBreakpoint ? 36.0 : 20.0;
               return SingleChildScrollView(
                 padding: EdgeInsets.fromLTRB(horizontal, 10, horizontal, 28),
                 child: Center(
@@ -57,10 +55,7 @@ class HomePage extends StatelessWidget {
                           Row(
                             children: [
                               SizedBox(
-                                width: math.min(
-                                  300,
-                                  constraints.maxWidth * 0.36,
-                                ),
+                                width: math.min(300, constraints.maxWidth * 0.36),
                                 child: StarPreview(theme: settings.boardTheme),
                               ),
                               const SizedBox(width: 32),
@@ -93,8 +88,7 @@ class HomePage extends StatelessWidget {
                           color: theme.colorScheme.tertiary,
                           title: PlayMode.local.label,
                           subtitle: '同一台设备轮流落子 · 支持 2 / 3 / 4 / 6 人',
-                          onTap: () =>
-                              _start(context, settings, PlayMode.local),
+                          onTap: () => _start(context, settings, PlayMode.local),
                         ),
                         const SizedBox(height: 12),
                         _ModeCard(
@@ -134,10 +128,7 @@ class HomePage extends StatelessWidget {
                           children: [
                             TextButton.icon(
                               onPressed: () => showRulesDialog(context),
-                              icon: const Icon(
-                                Icons.menu_book_outlined,
-                                size: 18,
-                              ),
+                              icon: const Icon(Icons.menu_book_outlined, size: 18),
                               label: const Text('玩法说明'),
                             ),
                             const SizedBox(width: 8),
@@ -169,39 +160,27 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  Future<void> _start(
-    BuildContext context,
-    SettingsProvider settings,
-    PlayMode mode,
-  ) async {
-    final setup = await showGameSetupSheet(
-      context,
-      mode: mode,
-      settings: settings,
-    );
+  Future<void> _start(BuildContext context, SettingsProvider settings, PlayMode mode) async {
+    final setup = await showGameSetupSheet(context, mode: mode, settings: settings);
     if (setup == null || !context.mounted) return;
     await Navigator.of(context)
         .push(MaterialPageRoute<void>(builder: (_) => GamePage(setup: setup)));
   }
 
   void _openSettings(BuildContext context) {
-    Navigator.of(context)
-        .push(MaterialPageRoute<void>(builder: (_) => const SettingsPage()));
+    Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const SettingsPage()));
   }
 
   void _openStats(BuildContext context) {
-    Navigator.of(context)
-        .push(MaterialPageRoute<void>(builder: (_) => const StatsPage()));
+    Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const StatsPage()));
   }
 
   void _openArchive(BuildContext context) {
-    Navigator.of(context)
-        .push(MaterialPageRoute<void>(builder: (_) => const ArchivePage()));
+    Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const ArchivePage()));
   }
 
   void _openChallenge(BuildContext context) {
-    Navigator.of(context)
-        .push(MaterialPageRoute<void>(builder: (_) => const ChallengePage()));
+    Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const ChallengePage()));
   }
 }
 
@@ -220,11 +199,7 @@ class _TopBar extends StatelessWidget {
             color: theme.colorScheme.primary,
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(
-            Icons.blur_on,
-            size: 20,
-            color: theme.colorScheme.onPrimary,
-          ),
+          child: Icon(Icons.blur_on, size: 20, color: theme.colorScheme.onPrimary),
         ),
         const SizedBox(width: 10),
         Text(
@@ -234,9 +209,9 @@ class _TopBar extends StatelessWidget {
         const Spacer(),
         IconButton(
           tooltip: '设置',
-          onPressed: () => Navigator.of(
-            context,
-          ).push(MaterialPageRoute<void>(builder: (_) => const SettingsPage())),
+          onPressed: () =>
+              Navigator.of(context)
+                  .push(MaterialPageRoute<void>(builder: (_) => const SettingsPage())),
           icon: const Icon(Icons.settings_outlined, size: 21),
         ),
       ],
@@ -257,10 +232,7 @@ class _HeroText extends StatelessWidget {
       children: [
         Text(
           '六角星上的\n连跳博弈',
-          style: theme.textTheme.headlineMedium?.copyWith(
-            height: 1.25,
-            letterSpacing: 3,
-          ),
+          style: theme.textTheme.headlineMedium?.copyWith(height: 1.25, letterSpacing: 3),
         ),
         const SizedBox(height: 12),
         Text(
@@ -385,10 +357,7 @@ class _ModeCard extends StatelessWidget {
                   ],
                 ),
               ),
-              Icon(
-                Icons.chevron_right,
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
+              Icon(Icons.chevron_right, color: theme.colorScheme.onSurfaceVariant),
             ],
           ),
         ),

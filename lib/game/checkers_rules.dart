@@ -5,20 +5,13 @@ import 'checkers_board.dart';
 ///
 /// 单步只有一站；连跳会记录每一跳的落脚点，便于逐跳播放动画。
 class CheckersMove {
-  const CheckersMove({
-    required this.from,
-    required this.landings,
-    required this.jump,
-  });
+  const CheckersMove({required this.from, required this.landings, required this.jump});
 
   factory CheckersMove.step(int from, int to) =>
       CheckersMove(from: from, landings: [to], jump: false);
 
-  factory CheckersMove.jump(int from, List<int> landings) => CheckersMove(
-    from: from,
-    landings: List.unmodifiable(landings),
-    jump: true,
-  );
+  factory CheckersMove.jump(int from, List<int> landings) =>
+      CheckersMove(from: from, landings: List.unmodifiable(landings), jump: true);
 
   final int from;
   final List<int> landings;

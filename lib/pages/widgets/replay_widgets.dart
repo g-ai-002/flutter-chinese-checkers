@@ -16,12 +16,8 @@ class ReplayBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final step = controller.currentStep;
-    final accent = step == null
-        ? theme.colorScheme.primary
-        : playerStyleOf(step.record.seat).main;
-    final title = step == null
-        ? '开局'
-        : '第 ${controller.index} / ${controller.total} 手';
+    final accent = step == null ? theme.colorScheme.primary : playerStyleOf(step.record.seat).main;
+    final title = step == null ? '开局' : '第 ${controller.index} / ${controller.total} 手';
     final subtitle = step == null
         ? '初始营地布局 · 点播放或向后翻看'
         : '${controller.setup.seatLabel(step.record.seat)} · '
@@ -38,10 +34,7 @@ class ReplayBanner extends StatelessWidget {
           Container(
             width: 8,
             height: 30,
-            decoration: BoxDecoration(
-              color: accent,
-              borderRadius: BorderRadius.circular(4),
-            ),
+            decoration: BoxDecoration(color: accent, borderRadius: BorderRadius.circular(4)),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -70,9 +63,7 @@ class ReplayBanner extends StatelessWidget {
           const SizedBox(width: 8),
           Text(
             controller.setup.playerCount.label,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
+            style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
           ),
         ],
       ),
@@ -102,9 +93,7 @@ class ReplayControls extends StatelessWidget {
             max: total.toDouble(),
             divisions: total > 0 ? total : null,
             label: '${controller.index} / $total',
-            onChanged: enabled
-                ? (value) => controller.seekTo(value.round())
-                : null,
+            onChanged: enabled ? (value) => controller.seekTo(value.round()) : null,
           ),
         ),
         Row(
@@ -146,11 +135,7 @@ class ReplayControls extends StatelessWidget {
 }
 
 class ReplayMoveList extends StatelessWidget {
-  const ReplayMoveList({
-    super.key,
-    required this.controller,
-    this.scrollController,
-  });
+  const ReplayMoveList({super.key, required this.controller, this.scrollController});
 
   final ReplayController controller;
 
@@ -159,10 +144,7 @@ class ReplayMoveList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: controller,
-      builder: (context, _) => _buildPanel(context),
-    );
+    return ListenableBuilder(listenable: controller, builder: (context, _) => _buildPanel(context));
   }
 
   Widget _buildPanel(BuildContext context) {
@@ -235,11 +217,7 @@ class _BestMoveBar extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(14, 8, 10, 8),
           child: Row(
             children: [
-              Icon(
-                Icons.auto_awesome,
-                size: 15,
-                color: theme.colorScheme.tertiary,
-              ),
+              Icon(Icons.auto_awesome, size: 15, color: theme.colorScheme.tertiary),
               const SizedBox(width: 7),
               Expanded(
                 child: Text(
@@ -253,11 +231,7 @@ class _BestMoveBar extends StatelessWidget {
                   ),
                 ),
               ),
-              Icon(
-                Icons.chevron_right,
-                size: 16,
-                color: theme.colorScheme.tertiary,
-              ),
+              Icon(Icons.chevron_right, size: 16, color: theme.colorScheme.tertiary),
             ],
           ),
         ),
@@ -298,9 +272,7 @@ class _MoveTile extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 8),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(10),
-              border: selected
-                  ? Border.all(color: accent.withValues(alpha: 0.55))
-                  : null,
+              border: selected ? Border.all(color: accent.withValues(alpha: 0.55)) : null,
             ),
             child: Row(
               children: [
@@ -319,10 +291,7 @@ class _MoveTile extends StatelessWidget {
                 Container(
                   width: 9,
                   height: 9,
-                  decoration: BoxDecoration(
-                    color: accent,
-                    shape: BoxShape.circle,
-                  ),
+                  decoration: BoxDecoration(color: accent, shape: BoxShape.circle),
                 ),
                 const SizedBox(width: 9),
                 Expanded(
@@ -331,15 +300,11 @@ class _MoveTile extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        isStart
-                            ? '开局'
-                            : controller.setup.seatLabel(step!.record.seat),
+                        isStart ? '开局' : controller.setup.seatLabel(step!.record.seat),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: theme.textTheme.bodyMedium?.copyWith(
-                          fontWeight: selected
-                              ? FontWeight.w700
-                              : FontWeight.w500,
+                          fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -357,22 +322,14 @@ class _MoveTile extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (controller.hasBestMove &&
-                    position == controller.bestMoveNumber)
+                if (controller.hasBestMove && position == controller.bestMoveNumber)
                   Padding(
                     padding: const EdgeInsets.only(right: 4),
-                    child: Icon(
-                      Icons.auto_awesome,
-                      size: 14,
-                      color: theme.colorScheme.tertiary,
-                    ),
+                    child: Icon(Icons.auto_awesome, size: 14, color: theme.colorScheme.tertiary),
                   ),
                 if (step != null && step.landedInCamp)
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
                       color: theme.colorScheme.tertiary.withValues(alpha: 0.14),
                       borderRadius: BorderRadius.circular(6),

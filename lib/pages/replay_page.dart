@@ -28,10 +28,7 @@ class _ReplayPageState extends State<ReplayPage> {
   @override
   void initState() {
     super.initState();
-    _replay = ReplayController(
-      setup: widget.archive.setup,
-      records: widget.archive.records,
-    );
+    _replay = ReplayController(setup: widget.archive.setup, records: widget.archive.records);
     _game = CheckersGame(
       source: _replay,
       theme: context.read<SettingsProvider>().boardTheme,
@@ -61,15 +58,8 @@ class _ReplayPageState extends State<ReplayPage> {
 
   void _syncScroll() {
     if (!_scroll.hasClients) return;
-    final target = (_replay.index * kReplayRowExtent).clamp(
-      0.0,
-      _scroll.position.maxScrollExtent,
-    );
-    _scroll.animateTo(
-      target,
-      duration: const Duration(milliseconds: 180),
-      curve: Curves.easeOut,
-    );
+    final target = (_replay.index * kReplayRowExtent).clamp(0.0, _scroll.position.maxScrollExtent);
+    _scroll.animateTo(target, duration: const Duration(milliseconds: 180), curve: Curves.easeOut);
   }
 
   Widget _banner() {
@@ -140,10 +130,7 @@ class _ReplayPageState extends State<ReplayPage> {
                 _banner(),
                 const SizedBox(height: 10),
                 Expanded(
-                  child: BoardStage(
-                    game: _game,
-                    gameKey: const ValueKey('replay-board'),
-                  ),
+                  child: BoardStage(game: _game, gameKey: const ValueKey('replay-board')),
                 ),
                 const SizedBox(height: 10),
                 _controls(),
@@ -153,10 +140,7 @@ class _ReplayPageState extends State<ReplayPage> {
           const SizedBox(width: 20),
           SizedBox(
             width: 300,
-            child: ReplayMoveList(
-              controller: _replay,
-              scrollController: _scroll,
-            ),
+            child: ReplayMoveList(controller: _replay, scrollController: _scroll),
           ),
         ],
       ),
@@ -169,25 +153,16 @@ class _ReplayPageState extends State<ReplayPage> {
     return Column(
       children: [
         if (!short) ...[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
-            child: _banner(),
-          ),
+          Padding(padding: const EdgeInsets.fromLTRB(12, 4, 12, 0), child: _banner()),
           const SizedBox(height: 8),
         ],
         Expanded(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: BoardStage(
-              game: _game,
-              gameKey: const ValueKey('replay-board'),
-            ),
+            child: BoardStage(game: _game, gameKey: const ValueKey('replay-board')),
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(12, 4, 12, 10),
-          child: _controls(),
-        ),
+        Padding(padding: const EdgeInsets.fromLTRB(12, 4, 12, 10), child: _controls()),
       ],
     );
   }

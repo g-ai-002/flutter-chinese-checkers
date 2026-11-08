@@ -35,9 +35,7 @@ class StorageService {
     return prefs;
   }
 
-  Future<void> _write(
-    Future<bool> Function(SharedPreferences prefs) action,
-  ) async {
+  Future<void> _write(Future<bool> Function(SharedPreferences prefs) action) async {
     try {
       await action(_p);
     } catch (_) {}
@@ -68,13 +66,11 @@ class StorageService {
   Future<void> setBoardThemeId(String value) =>
       _write((p) => p.setString(AppConstants.prefKeyBoardTheme, value));
 
-  PlayerCount get playerCount =>
-      PlayerCount.byCount(_p.getInt(AppConstants.prefKeyPlayerCount));
+  PlayerCount get playerCount => PlayerCount.byCount(_p.getInt(AppConstants.prefKeyPlayerCount));
   Future<void> setPlayerCount(PlayerCount value) =>
       _write((p) => p.setInt(AppConstants.prefKeyPlayerCount, value.count));
 
-  Difficulty get difficulty =>
-      Difficulty.byName(_p.getString(AppConstants.prefKeyDifficulty));
+  Difficulty get difficulty => Difficulty.byName(_p.getString(AppConstants.prefKeyDifficulty));
   Future<void> setDifficulty(Difficulty value) =>
       _write((p) => p.setString(AppConstants.prefKeyDifficulty, value.name));
 
@@ -86,8 +82,7 @@ class StorageService {
   Future<void> setHumanSeat(int value) =>
       _write((p) => p.setInt(AppConstants.prefKeyHumanSeat, value));
 
-  LogicRate get logicRate =>
-      LogicRate.byHz(_p.getInt(AppConstants.prefKeyLogicRate));
+  LogicRate get logicRate => LogicRate.byHz(_p.getInt(AppConstants.prefKeyLogicRate));
   Future<void> setLogicRate(LogicRate value) =>
       _write((p) => p.setInt(AppConstants.prefKeyLogicRate, value.hz));
 
@@ -97,8 +92,7 @@ class StorageService {
   List<MatchRecord> get matches {
     final cached = _matches;
     if (cached != null) return cached;
-    final lines =
-        _p.getStringList(AppConstants.prefKeyMatches) ?? const <String>[];
+    final lines = _p.getStringList(AppConstants.prefKeyMatches) ?? const <String>[];
     final records = <MatchRecord>[];
     for (final line in lines) {
       try {
@@ -116,10 +110,7 @@ class StorageService {
     _matches = null;
     return p.setStringList(
       AppConstants.prefKeyMatches,
-      _trimmed([
-        jsonEncode(record.toJson()),
-        ...lines,
-      ], AppConstants.maxStoredMatches),
+      _trimmed([jsonEncode(record.toJson()), ...lines], AppConstants.maxStoredMatches),
     );
   });
 
@@ -177,8 +168,7 @@ class StorageService {
   Map<String, ChallengeResult> get challengeResults {
     final cached = _challenges;
     if (cached != null) return cached;
-    final stored =
-        _p.getStringList(AppConstants.prefKeyChallenges) ?? const <String>[];
+    final stored = _p.getStringList(AppConstants.prefKeyChallenges) ?? const <String>[];
     final results = <String, ChallengeResult>{};
     for (final line in stored) {
       try {
@@ -220,11 +210,9 @@ class StorageService {
 
 /// 棋谱库的读取缓存：原始文本与解析结果一一对应，增删时按同一下标过滤。
 class _ReplayCache {
-  _ReplayCache({
-    required List<String> lines,
-    required List<ReplayArchive> archives,
-  }) : lines = List.unmodifiable(lines),
-       archives = List.unmodifiable(archives);
+  _ReplayCache({required List<String> lines, required List<ReplayArchive> archives})
+    : lines = List.unmodifiable(lines),
+      archives = List.unmodifiable(archives);
 
   final List<String> lines;
   final List<ReplayArchive> archives;

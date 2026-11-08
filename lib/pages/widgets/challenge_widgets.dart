@@ -50,9 +50,7 @@ Future<void> showChallengeResultDialog(
         icon: Icon(
           success ? Icons.emoji_events_outlined : Icons.hourglass_bottom,
           size: 34,
-          color: success
-              ? const Color(0xFFE0A526)
-              : theme.colorScheme.onSurfaceVariant,
+          color: success ? const Color(0xFFE0A526) : theme.colorScheme.onSurfaceVariant,
         ),
         title: Text(success ? '挑战成功' : '步数用尽'),
         content: Column(
@@ -61,10 +59,7 @@ Future<void> showChallengeResultDialog(
             if (success) ...[
               ChallengeStars(stars: stars, size: 30),
               const SizedBox(height: 10),
-              Text(
-                '$moves 步完成 · 参考 ${level.parMoves} 步',
-                style: theme.textTheme.bodyMedium,
-              ),
+              Text('$moves 步完成 · 参考 ${level.parMoves} 步', style: theme.textTheme.bodyMedium),
             ] else ...[
               Text(
                 '在 ${level.moveLimit} 步内没能填满目标营地，换个顺序再试试。',

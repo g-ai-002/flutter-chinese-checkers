@@ -22,8 +22,7 @@ class SettingsProvider extends ChangeNotifier {
   final StorageService _storage;
 
   bool get darkMode => _storage.darkMode;
-  Future<void> setDarkMode(bool value) =>
-      _update(() => _storage.setDarkMode(value));
+  Future<void> setDarkMode(bool value) => _update(() => _storage.setDarkMode(value));
 
   bool get soundEnabled => _storage.soundEnabled;
   Future<void> setSoundEnabled(bool value) => _update(() async {
@@ -45,36 +44,29 @@ class SettingsProvider extends ChangeNotifier {
   });
 
   bool get showHints => _storage.showHints;
-  Future<void> setShowHints(bool value) =>
-      _update(() => _storage.setShowHints(value));
+  Future<void> setShowHints(bool value) => _update(() => _storage.setShowHints(value));
 
   BoardTheme get boardTheme => boardThemeOf(_storage.boardThemeId);
-  Future<void> setBoardTheme(BoardTheme value) =>
-      _update(() => _storage.setBoardThemeId(value.id));
+  Future<void> setBoardTheme(BoardTheme value) => _update(() => _storage.setBoardThemeId(value.id));
 
   PlayerCount get playerCount => _storage.playerCount;
-  Future<void> setPlayerCount(PlayerCount value) =>
-      _update(() => _storage.setPlayerCount(value));
+  Future<void> setPlayerCount(PlayerCount value) => _update(() => _storage.setPlayerCount(value));
 
   Difficulty get difficulty => _storage.difficulty;
-  Future<void> setDifficulty(Difficulty value) =>
-      _update(() => _storage.setDifficulty(value));
+  Future<void> setDifficulty(Difficulty value) => _update(() => _storage.setDifficulty(value));
 
   int get humanSeat => _storage.humanSeatFor(playerCount.count);
-  Future<void> setHumanSeat(int value) =>
-      _update(() => _storage.setHumanSeat(value));
+  Future<void> setHumanSeat(int value) => _update(() => _storage.setHumanSeat(value));
 
   LogicRate get logicRate => _storage.logicRate;
-  Future<void> setLogicRate(LogicRate value) =>
-      _update(() => _storage.setLogicRate(value));
+  Future<void> setLogicRate(LogicRate value) => _update(() => _storage.setLogicRate(value));
 
   List<MatchRecord> get matches => _storage.matches;
 
   MatchSummary? _summary;
 
   /// 生涯聚合只随对局记录变化，首页与统计页共用同一份结果。
-  MatchSummary get matchSummary =>
-      _summary ??= MatchSummary.fromRecords(matches);
+  MatchSummary get matchSummary => _summary ??= MatchSummary.fromRecords(matches);
 
   Future<void> recordMatch(MatchRecord record) async {
     await _storage.addMatch(record);
@@ -105,21 +97,16 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Map<String, ChallengeResult> get challengeResults =>
-      _storage.challengeResults;
+  Map<String, ChallengeResult> get challengeResults => _storage.challengeResults;
 
-  ChallengeResult? challengeResultOf(ChallengeLevel level) =>
-      challengeResults[level.id];
+  ChallengeResult? challengeResultOf(ChallengeLevel level) => challengeResults[level.id];
 
   /// 已通关的关卡数，未知 id 不计入。
-  int get challengeCompleted => kChallengeLevels
-      .where((level) => challengeResults.containsKey(level.id))
-      .length;
+  int get challengeCompleted =>
+      kChallengeLevels.where((level) => challengeResults.containsKey(level.id)).length;
 
-  int get challengeStars => kChallengeLevels.fold(
-    0,
-    (sum, level) => sum + (challengeResults[level.id]?.stars ?? 0),
-  );
+  int get challengeStars =>
+      kChallengeLevels.fold(0, (sum, level) => sum + (challengeResults[level.id]?.stars ?? 0));
 
   int get maxChallengeStars => kChallengeLevels.length * 3;
 
@@ -133,8 +120,7 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _syncFeedback() =>
-      SoundService.configure(sound: soundEnabled, haptics: hapticsEnabled);
+  void _syncFeedback() => SoundService.configure(sound: soundEnabled, haptics: hapticsEnabled);
 
   /// 写入偏好后统一通知界面，避免每个 setter 重复一遍。
   Future<void> _update(Future<void> Function() write) async {

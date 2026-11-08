@@ -28,34 +28,16 @@ class SoundService {
   static const Map<GameSound, List<SynthNote>> _presets = {
     GameSound.select: [
       SynthNote(frequency: 820, start: 0, duration: 0.045, gain: 0.35),
-      SynthNote(
-        frequency: 1240,
-        start: 0.002,
-        duration: 0.035,
-        gain: 0.18,
-        noise: 0.05,
-      ),
+      SynthNote(frequency: 1240, start: 0.002, duration: 0.035, gain: 0.18, noise: 0.05),
     ],
     GameSound.step: [
       SynthNote(frequency: 1080, start: 0, duration: 0.05, noise: 0.18),
-      SynthNote(
-        frequency: 690,
-        start: 0.004,
-        duration: 0.075,
-        gain: 0.32,
-        noise: 0.06,
-      ),
+      SynthNote(frequency: 690, start: 0.004, duration: 0.075, gain: 0.32, noise: 0.06),
     ],
     GameSound.jump: [
       SynthNote(frequency: 620, start: 0, duration: 0.07, gain: 0.42),
       SynthNote(frequency: 830, start: 0.055, duration: 0.08, gain: 0.45),
-      SynthNote(
-        frequency: 1180,
-        start: 0.115,
-        duration: 0.1,
-        gain: 0.38,
-        noise: 0.1,
-      ),
+      SynthNote(frequency: 1180, start: 0.115, duration: 0.1, gain: 0.38, noise: 0.1),
     ],
     GameSound.win: [
       SynthNote(frequency: 523.25, start: 0, duration: 0.16),
@@ -83,10 +65,7 @@ class SoundService {
       final soloud = SoLoud.instance;
       if (!soloud.isInitialized) await soloud.init();
       for (final sound in GameSound.values) {
-        _sources[sound] = await soloud.loadMem(
-          'tiaoqi-${sound.name}.wav',
-          clipOf(sound),
-        );
+        _sources[sound] = await soloud.loadMem('tiaoqi-${sound.name}.wav', clipOf(sound));
       }
     } catch (error) {
       _loadFailed = true;

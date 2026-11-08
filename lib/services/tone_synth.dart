@@ -29,10 +29,7 @@ class SynthNote {
 /// 纯 Dart 音效合成：把若干乐音渲染成 16 位单声道 WAV 字节。
 ///
 /// 音效全部在运行时生成，代码仓库与安装包都不携带音频文件。
-Uint8List synthesizeWav(
-  List<SynthNote> notes, {
-  int sampleRate = checkersSampleRate,
-}) {
+Uint8List synthesizeWav(List<SynthNote> notes, {int sampleRate = checkersSampleRate}) {
   const tailSeconds = 0.04;
   final seconds = notes.fold<double>(
     0,
@@ -53,14 +50,9 @@ Uint8List synthesizeWav(
       if (index >= totalSamples) break;
       final progress = i / count;
       final envelope =
-          math.min(1, i / attack) *
-          math.min(1, (count - i) / release) *
-          math.exp(-3.2 * progress);
+          math.min(1, i / attack) * math.min(1, (count - i) / release) * math.exp(-3.2 * progress);
       final phase = 2 * math.pi * note.frequency * (i / sampleRate);
-      final tone =
-          math.sin(phase) +
-          0.32 * math.sin(2 * phase) +
-          0.12 * math.sin(3 * phase);
+      final tone = math.sin(phase) + 0.32 * math.sin(2 * phase) + 0.12 * math.sin(3 * phase);
       final hit = note.noise * (random.nextDouble() * 2 - 1);
       mix[index] += envelope * (tone * gain + hit);
     }
@@ -92,34 +84,10 @@ class _PluckNote {
 
 /// C 宫五声音阶的主旋律与低音铺底，全部为相对循环起点的秒数。
 const List<_PluckNote> _musicNotes = [
-  _PluckNote(
-    start: 0,
-    frequency: 130.81,
-    duration: 7.6,
-    gain: 0.30,
-    damp: 0.55,
-  ),
-  _PluckNote(
-    start: 4,
-    frequency: 196.00,
-    duration: 3.6,
-    gain: 0.24,
-    damp: 0.75,
-  ),
-  _PluckNote(
-    start: 8,
-    frequency: 130.81,
-    duration: 7.6,
-    gain: 0.30,
-    damp: 0.55,
-  ),
-  _PluckNote(
-    start: 12,
-    frequency: 196.00,
-    duration: 3.6,
-    gain: 0.24,
-    damp: 0.75,
-  ),
+  _PluckNote(start: 0, frequency: 130.81, duration: 7.6, gain: 0.30, damp: 0.55),
+  _PluckNote(start: 4, frequency: 196.00, duration: 3.6, gain: 0.24, damp: 0.75),
+  _PluckNote(start: 8, frequency: 130.81, duration: 7.6, gain: 0.30, damp: 0.55),
+  _PluckNote(start: 12, frequency: 196.00, duration: 3.6, gain: 0.24, damp: 0.75),
   _PluckNote(start: 0.0, frequency: 392.00, duration: 1.2, gain: 0.46),
   _PluckNote(start: 0.6, frequency: 523.25, duration: 1.2, gain: 0.50),
   _PluckNote(start: 1.4, frequency: 587.33, duration: 1.2, gain: 0.50),
@@ -149,10 +117,7 @@ Uint8List synthesizeMusicWav({int sampleRate = kMusicSampleRate}) {
   final random = math.Random(20261103);
   for (final note in _musicNotes) {
     final offset = (note.start * sampleRate).round();
-    final count = math.min(
-      (note.duration * sampleRate).round(),
-      totalSamples - offset,
-    );
+    final count = math.min((note.duration * sampleRate).round(), totalSamples - offset);
     final attack = math.max(1, (0.004 * sampleRate).round());
     for (var i = 0; i < count; i++) {
       final time = i / sampleRate;

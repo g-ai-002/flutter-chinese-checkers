@@ -47,10 +47,7 @@ class AiHeuristics {
   final Map<int, List<int>> _distanceCache = {};
 
   /// 估值期间复用的临时容器：搜索每步会评估上千次，避免反复分配列表。
-  late final List<List<int>> _groups = List.generate(
-    setup.players,
-    (_) => <int>[],
-  );
+  late final List<List<int>> _groups = List.generate(setup.players, (_) => <int>[]);
   final List<int> _outside = [];
   final List<int> _slots = [];
 
@@ -84,12 +81,7 @@ class AiHeuristics {
     return _groups;
   }
 
-  double _ownScore(
-    List<int> pieces,
-    CheckersBoard board,
-    int seat,
-    int target,
-  ) {
+  double _ownScore(List<int> pieces, CheckersBoard board, int seat, int target) {
     final distances = _distances(target);
     var score = 0.0;
     _outside.clear();
@@ -114,12 +106,7 @@ class AiHeuristics {
     return score;
   }
 
-  double _opponentScore(
-    List<int> pieces,
-    CheckersBoard board,
-    int other,
-    int target,
-  ) {
+  double _opponentScore(List<int> pieces, CheckersBoard board, int other, int target) {
     final distances = _distances(target);
     var score = 0.0;
     var held = 0;

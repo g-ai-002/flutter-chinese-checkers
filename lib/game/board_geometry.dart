@@ -16,12 +16,7 @@ const double _sqrt3Half = 0.8660254037844386;
 ///
 /// [x]/[y] 是以孔距为 1 的模型坐标，绘制时再统一缩放。
 class Hole {
-  const Hole({
-    required this.index,
-    required this.q,
-    required this.r,
-    required this.arm,
-  });
+  const Hole({required this.index, required this.q, required this.r, required this.arm});
 
   final int index;
   final int q;
@@ -114,8 +109,7 @@ class BoardGeometry {
 
   int get length => holes.length;
 
-  bool get isComplete =>
-      holes.length == 121 && armHoles.every((a) => a.length == 10);
+  bool get isComplete => holes.length == 121 && armHoles.every((a) => a.length == 10);
 
   int? holeAt(int q, int r) => _indexByKey[_key(q, r)];
 
@@ -170,10 +164,7 @@ class BoardGeometry {
   /// 六角星外轮廓的 12 个顶点（模型坐标），按角度依次排列。
   ///
   /// 六个角指向营地外侧，六个凹口位于中央六边形的角上。
-  static List<List<double>> starOutline({
-    double tip = 7.8,
-    double notch = 4.8,
-  }) {
+  static List<List<double>> starOutline({double tip = 7.8, double notch = 4.8}) {
     final points = <List<double>>[];
     for (var i = 0; i < 12; i++) {
       final isTip = i.isEven;

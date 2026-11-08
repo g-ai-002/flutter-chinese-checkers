@@ -51,10 +51,7 @@ class StatsPage extends StatelessWidget {
     );
   }
 
-  Future<void> _confirmClear(
-    BuildContext context,
-    SettingsProvider settings,
-  ) async {
+  Future<void> _confirmClear(BuildContext context, SettingsProvider settings) async {
     final confirmed = await showConfirmDialog(
       context,
       title: '清空对局统计？',

@@ -24,16 +24,10 @@ Future<void> showGameResultDialog(
         children: [
           Icon(
             isDraw ? Icons.handshake_outlined : Icons.emoji_events_outlined,
-            color: isDraw
-                ? Theme.of(dialogContext).colorScheme.onSurfaceVariant
-                : style.main,
+            color: isDraw ? Theme.of(dialogContext).colorScheme.onSurfaceVariant : style.main,
           ),
           const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              winner == null ? '本局僵局' : '${record.setup.seatLabel(winner)}获胜',
-            ),
-          ),
+          Expanded(child: Text(winner == null ? '本局僵局' : '${record.setup.seatLabel(winner)}获胜')),
         ],
       ),
       content: Column(
@@ -54,18 +48,14 @@ Future<void> showGameResultDialog(
           ],
           if (efficiency != null) ...[
             const SizedBox(height: 8),
-            _StatRow(
-              label: '入营效率',
-              value: '${efficiency.toStringAsFixed(1)} 步/子',
-            ),
+            _StatRow(label: '入营效率', value: '${efficiency.toStringAsFixed(1)} 步/子'),
           ],
           if (record.moves > 0) ...[
             const SizedBox(height: 14),
             Text(
               '本局已存入棋谱库，可复盘、导出分享或随时回看。',
-              style: Theme.of(dialogContext).textTheme.bodySmall?.copyWith(
-                color: Theme.of(dialogContext).colorScheme.onSurfaceVariant,
-              ),
+              style: Theme.of(dialogContext).textTheme.bodySmall
+                  ?.copyWith(color: Theme.of(dialogContext).colorScheme.onSurfaceVariant),
             ),
           ],
         ],
@@ -96,17 +86,10 @@ class _StatRow extends StatelessWidget {
       children: [
         Text(
           label,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
+          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
         ),
         const Spacer(),
-        Text(
-          value,
-          style: theme.textTheme.bodyMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+        Text(value, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
       ],
     );
   }

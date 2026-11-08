@@ -51,12 +51,7 @@ class _SetupSheetState extends State<_SetupSheet> {
     return SafeArea(
       top: false,
       child: Padding(
-        padding: EdgeInsets.fromLTRB(
-          20,
-          0,
-          20,
-          16 + MediaQuery.viewInsetsOf(context).bottom,
-        ),
+        padding: EdgeInsets.fromLTRB(20, 0, 20, 16 + MediaQuery.viewInsetsOf(context).bottom),
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -92,10 +87,7 @@ class _SetupSheetState extends State<_SetupSheet> {
                   children: [
                     for (var seat = 0; seat < _count.count; seat++)
                       ChoiceChip(
-                        avatar: CircleAvatar(
-                          backgroundColor: playerStyleOf(seat).main,
-                          radius: 6,
-                        ),
+                        avatar: CircleAvatar(backgroundColor: playerStyleOf(seat).main, radius: 6),
                         label: Text('座位 ${seat + 1}'),
                         selected: _seat == seat,
                         onSelected: (_) => setState(() => _seat = seat),

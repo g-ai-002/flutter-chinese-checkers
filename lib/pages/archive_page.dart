@@ -49,8 +49,7 @@ class ArchivePage extends StatelessWidget {
                       return ReplayArchiveTile(
                         archive: archive,
                         onOpen: () => _open(context, archive),
-                        onExport: () =>
-                            showReplayExportDialog(context, archive),
+                        onExport: () => showReplayExportDialog(context, archive),
                         onDelete: () => _delete(context, archive),
                       );
                     },
@@ -62,9 +61,8 @@ class ArchivePage extends StatelessWidget {
   }
 
   void _open(BuildContext context, ReplayArchive archive) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => ReplayPage(archive: archive)),
-    );
+    Navigator.of(context)
+        .push(MaterialPageRoute<void>(builder: (_) => ReplayPage(archive: archive)));
   }
 
   Future<void> _import(BuildContext context) async {
@@ -74,8 +72,7 @@ class ArchivePage extends StatelessWidget {
     await settings.saveReplay(archive);
     LogService.info('导入棋谱: ${archive.title}, ${archive.moves} 手');
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text('已导入 ${archive.moves} 手棋谱')));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('已导入 ${archive.moves} 手棋谱')));
   }
 
   Future<void> _delete(BuildContext context, ReplayArchive archive) async {

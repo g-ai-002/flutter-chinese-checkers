@@ -73,14 +73,7 @@ class ChallengeLevel {
 }
 
 /// 目标营地（3 号角）内圈固定填满，残局只留第一排四个空位。
-const List<(int, int)> _kInnerCamp = [
-  (-4, 6),
-  (-3, 6),
-  (-2, 6),
-  (-4, 7),
-  (-3, 7),
-  (-4, 8),
-];
+const List<(int, int)> _kInnerCamp = [(-4, 6), (-3, 6), (-2, 6), (-4, 7), (-3, 7), (-4, 8)];
 
 ChallengeLevel _level({
   required String id,
@@ -115,12 +108,7 @@ final List<ChallengeLevel> kChallengeLevels = [
     moveLimit: 8,
     human: const [(-4, 4), (-3, 4), (-2, 4), (-1, 4)],
     blockers: const [(0, 4)],
-    solution: const [
-      (-4, 4, -4, 5),
-      (-3, 4, -3, 5),
-      (-2, 4, -2, 5),
-      (-1, 4, -1, 5),
-    ],
+    solution: const [(-4, 4, -4, 5), (-3, 4, -3, 5), (-2, 4, -2, 5), (-1, 4, -1, 5)],
   ),
   _level(
     id: 'starter-2',

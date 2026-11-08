@@ -35,9 +35,7 @@ class HudPanel extends StatelessWidget {
       decoration: BoxDecoration(
         color: scheme.surface.withValues(alpha: 0.94),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: border.withValues(alpha: accent == null ? 0.7 : 0.5),
-        ),
+        border: Border.all(color: border.withValues(alpha: accent == null ? 0.7 : 0.5)),
         boxShadow: [
           BoxShadow(
             color: const Color(0xFF000000).withValues(alpha: 0.14),
@@ -83,13 +81,9 @@ class HudButton extends StatelessWidget {
           padding: EdgeInsets.zero,
           backgroundColor: scheme.surface.withValues(alpha: 0.94),
           foregroundColor: scheme.onSurface,
-          disabledForegroundColor: scheme.onSurfaceVariant.withValues(
-            alpha: 0.38,
-          ),
+          disabledForegroundColor: scheme.onSurfaceVariant.withValues(alpha: 0.38),
           side: BorderSide(color: scheme.outline.withValues(alpha: 0.7)),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       );
     }
@@ -106,13 +100,8 @@ class HudButton extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 11),
             foregroundColor: scheme.onSurface,
             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(13),
-            ),
-            textStyle: const TextStyle(
-              fontSize: 12.5,
-              fontWeight: FontWeight.w600,
-            ),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
+            textStyle: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
           ),
         ),
       ),
@@ -122,12 +111,7 @@ class HudButton extends StatelessWidget {
 
 /// 轮次提示：谁在走、该做什么；电脑思考时在原位显示进度圈。
 class TurnHud extends StatelessWidget {
-  const TurnHud({
-    super.key,
-    required this.controller,
-    required this.width,
-    this.dense = false,
-  });
+  const TurnHud({super.key, required this.controller, required this.width, this.dense = false});
 
   final CheckersController controller;
   final double width;
@@ -147,9 +131,7 @@ class TurnHud extends StatelessWidget {
               : playerStyleOf(controller.winner!).main)
         : playerStyleOf(controller.currentSeat).main;
     final title = finished
-        ? (controller.winner == null
-              ? '本局僵局'
-              : '${setup.seatLabel(controller.winner!)}获胜')
+        ? (controller.winner == null ? '本局僵局' : '${setup.seatLabel(controller.winner!)}获胜')
         : thinking
         ? '${setup.seatLabel(controller.currentSeat)}思考中…'
         : '轮到 ${setup.seatLabel(controller.currentSeat)}';
@@ -169,10 +151,7 @@ class TurnHud extends StatelessWidget {
           Container(
             width: 6,
             height: dense ? 22 : 30,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(3),
-            ),
+            decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(3)),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -205,9 +184,7 @@ class TurnHud extends StatelessWidget {
           SizedBox(
             width: 16,
             height: 16,
-            child: thinking
-                ? CircularProgressIndicator(strokeWidth: 2, color: color)
-                : null,
+            child: thinking ? CircularProgressIndicator(strokeWidth: 2, color: color) : null,
           ),
         ],
       ),
@@ -261,9 +238,7 @@ class ChallengeHud extends StatelessWidget {
               ),
               Text(
                 '进营 $progress/10',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                ),
+                style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
               ),
             ],
           ),
@@ -284,12 +259,7 @@ class ChallengeHud extends StatelessWidget {
 }
 
 class PlayersHud extends StatelessWidget {
-  const PlayersHud({
-    super.key,
-    required this.controller,
-    this.width = 128,
-    this.showTitle = true,
-  });
+  const PlayersHud({super.key, required this.controller, this.width = 128, this.showTitle = true});
 
   final CheckersController controller;
   final double width;
@@ -319,10 +289,7 @@ class PlayersHud extends StatelessWidget {
             ),
             const SizedBox(height: 6),
           ],
-          for (var i = 0; i < rows.length; i++) ...[
-            if (i > 0) const SizedBox(height: 4),
-            rows[i],
-          ],
+          for (var i = 0; i < rows.length; i++) ...[if (i > 0) const SizedBox(height: 4), rows[i]],
         ],
       ),
     );
@@ -423,10 +390,7 @@ class ActionDock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final canHint =
-        !controller.isFinished &&
-        controller.isHumanTurn &&
-        !controller.isAiThinking;
+    final canHint = !controller.isFinished && controller.isHumanTurn && !controller.isAiThinking;
     final canUndo = controller.canUndo && !controller.isAiThinking;
     return HudPanel(
       padding: const EdgeInsets.all(4),
@@ -488,13 +452,9 @@ class _DockButton extends StatelessWidget {
           padding: EdgeInsets.zero,
           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           foregroundColor: scheme.primary,
-          disabledForegroundColor: scheme.onSurfaceVariant.withValues(
-            alpha: 0.4,
-          ),
+          disabledForegroundColor: scheme.onSurfaceVariant.withValues(alpha: 0.4),
           backgroundColor: scheme.primary.withValues(alpha: 0.08),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
       );
     }
@@ -517,10 +477,7 @@ class _DockButton extends StatelessWidget {
 }
 
 /// 残局关卡目标：参考步数、星级门槛与障碍说明。
-Future<void> showChallengeBriefDialog(
-  BuildContext context,
-  ChallengeLevel level,
-) {
+Future<void> showChallengeBriefDialog(BuildContext context, ChallengeLevel level) {
   return showDialog<void>(
     context: context,
     builder: (dialogContext) {
@@ -540,11 +497,7 @@ Future<void> showChallengeBriefDialog(
             const SizedBox(height: 12),
             Row(
               children: [
-                const Icon(
-                  Icons.star_rounded,
-                  size: 18,
-                  color: Color(0xFFE0A526),
-                ),
+                const Icon(Icons.star_rounded, size: 18, color: Color(0xFFE0A526)),
                 const SizedBox(width: 5),
                 Expanded(
                   child: Text(
@@ -560,34 +513,24 @@ Future<void> showChallengeBriefDialog(
           ],
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('知道了'),
-          ),
+          TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: const Text('知道了')),
         ],
       );
     },
   );
 }
 
-Future<void> showPlayerProgressDialog(
-  BuildContext context,
-  CheckersController controller,
-) {
+Future<void> showPlayerProgressDialog(BuildContext context, CheckersController controller) {
   return showDialog<void>(
     context: context,
     builder: (dialogContext) => AlertDialog(
       title: const Text('对局进度'),
       content: ListenableBuilder(
         listenable: controller,
-        builder: (context, _) =>
-            PlayersHud(controller: controller, width: 264, showTitle: false),
+        builder: (context, _) => PlayersHud(controller: controller, width: 264, showTitle: false),
       ),
       actions: [
-        TextButton(
-          onPressed: () => Navigator.of(dialogContext).pop(),
-          child: const Text('关闭'),
-        ),
+        TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: const Text('关闭')),
       ],
     ),
   );
