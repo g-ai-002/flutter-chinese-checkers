@@ -41,10 +41,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets('宽屏对局页显示进度侧栏与操作按钮', (tester) async {
-    await pumpGame(
-      tester,
-      const GameSetup(mode: PlayMode.local, playerCount: PlayerCount.two),
-    );
+    await pumpGame(tester, const GameSetup(mode: PlayMode.local, playerCount: PlayerCount.two));
 
     expect(find.text('轮到 玩家 1'), findsOneWidget);
     expect(find.text('对局进度'), findsOneWidget);
@@ -72,10 +69,7 @@ void main() {
   });
 
   testWidgets('重开按钮先弹出确认框', (tester) async {
-    await pumpGame(
-      tester,
-      const GameSetup(mode: PlayMode.local, playerCount: PlayerCount.two),
-    );
+    await pumpGame(tester, const GameSetup(mode: PlayMode.local, playerCount: PlayerCount.two));
 
     await tester.tap(find.text('重开'));
     await tester.pump(const Duration(milliseconds: 300));
@@ -114,23 +108,15 @@ void main() {
   });
 
   testWidgets('对局页标题展示人数与模式', (tester) async {
-    await pumpGame(
-      tester,
-      const GameSetup(mode: PlayMode.local, playerCount: PlayerCount.six),
-    );
+    await pumpGame(tester, const GameSetup(mode: PlayMode.local, playerCount: PlayerCount.six));
     expect(find.text('6 人 · 同屏对战'), findsOneWidget);
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
   testWidgets('对局未结束时复盘入口不可用', (tester) async {
-    await pumpGame(
-      tester,
-      const GameSetup(mode: PlayMode.local, playerCount: PlayerCount.two),
-    );
+    await pumpGame(tester, const GameSetup(mode: PlayMode.local, playerCount: PlayerCount.two));
 
-    final button = tester.widget<IconButton>(
-      find.widgetWithIcon(IconButton, Icons.history),
-    );
+    final button = tester.widget<IconButton>(find.widgetWithIcon(IconButton, Icons.history));
     expect(button.onPressed, isNull);
     expect(find.byTooltip('复盘（终局后可查看）'), findsOneWidget);
 
@@ -138,10 +124,7 @@ void main() {
   });
 
   testWidgets('宽屏棋盘铺满高度并突破旧的宽度上限', (tester) async {
-    await pumpGame(
-      tester,
-      const GameSetup(mode: PlayMode.local, playerCount: PlayerCount.two),
-    );
+    await pumpGame(tester, const GameSetup(mode: PlayMode.local, playerCount: PlayerCount.two));
 
     final board = tester.getRect(find.byKey(const ValueKey('board')));
     // 旧版棋盘被限制在 680 宽，现在由可用高度决定。
@@ -195,11 +178,32 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
-  testWidgets('玩法说明包含落点图例', (tester) async {
+  testWidgets('关闭对局页不残留电脑思考与棋盘空闲计时', (tester) async {
     await pumpGame(
       tester,
-      const GameSetup(mode: PlayMode.local, playerCount: PlayerCount.two),
+      const GameSetup(
+        mode: PlayMode.vsAi,
+        playerCount: PlayerCount.two,
+        humanSeat: 1,
+        difficulty: Difficulty.easy,
+      ),
     );
+    await tester.pump(const Duration(milliseconds: 60));
+
+    // 电脑正在思考，棋盘空闲计时也挂在 1.2s 之后：退出后都应取消。
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('关闭对局页取消提示自动收起计时', (tester) async {
+    await pumpGame(tester, const GameSetup(mode: PlayMode.local, playerCount: PlayerCount.two));
+    await tester.tap(find.text('提示'));
+    await tester.pump(const Duration(milliseconds: 100));
+
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('玩法说明包含落点图例', (tester) async {
+    await pumpGame(tester, const GameSetup(mode: PlayMode.local, playerCount: PlayerCount.two));
 
     await tester.tap(find.byTooltip('玩法说明'));
     await tester.pumpAndSettle();
@@ -223,10 +227,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text(level.hint), findsOneWidget);
-    expect(
-      find.text('三星 ≤ ${level.parMoves} 步 · 两星 ≤ ${level.parMoves + 2} 步'),
-      findsOneWidget,
-    );
+    expect(find.text('三星 ≤ ${level.parMoves} 步 · 两星 ≤ ${level.parMoves + 2} 步'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
   });

@@ -31,8 +31,7 @@ void main() {
     controller.start();
     expect(controller.currentSeat, 0);
 
-    final moves = CheckersRules(controller.geometry)
-        .legalMoves(controller.board, 0);
+    final moves = CheckersRules(controller.geometry).legalMoves(controller.board, 0);
     controller.applyMove(moves.first);
 
     expect(controller.currentSeat, 1);
@@ -54,9 +53,7 @@ void main() {
     final rules = CheckersRules(controller.geometry);
     final piece = controller.board
         .holesOf(0)
-        .firstWhere(
-          (hole) => rules.movesFrom(controller.board, hole).isNotEmpty,
-        );
+        .firstWhere((hole) => rules.movesFrom(controller.board, hole).isNotEmpty);
     controller.tapHole(piece);
 
     expect(controller.selectedHole, piece);
@@ -87,8 +84,7 @@ void main() {
   test('人机模式电脑自动回棋，随后轮到人类', () async {
     final controller = build(mode: PlayMode.vsAi, difficulty: Difficulty.easy);
     controller.start();
-    final moves = CheckersRules(controller.geometry)
-        .legalMoves(controller.board, 0);
+    final moves = CheckersRules(controller.geometry).legalMoves(controller.board, 0);
     controller.applyMove(moves.first);
     expect(controller.currentSeat, 1);
 
@@ -101,11 +97,7 @@ void main() {
   });
 
   test('人类执后手时电脑先行', () async {
-    final controller = build(
-      mode: PlayMode.vsAi,
-      humanSeat: 1,
-      difficulty: Difficulty.easy,
-    );
+    final controller = build(mode: PlayMode.vsAi, humanSeat: 1, difficulty: Difficulty.easy);
     controller.start();
     expect(controller.canUndo, isFalse);
 
@@ -123,8 +115,7 @@ void main() {
       aiDelay: const Duration(milliseconds: 40),
     );
     controller.start();
-    final moves = CheckersRules(controller.geometry)
-        .legalMoves(controller.board, 0);
+    final moves = CheckersRules(controller.geometry).legalMoves(controller.board, 0);
     controller.applyMove(moves.first);
     controller.undo();
 
@@ -132,6 +123,44 @@ void main() {
 
     expect(controller.history, isEmpty);
     expect(controller.currentSeat, 0);
+    expect(controller.isAiThinking, isFalse);
+    controller.dispose();
+  });
+
+  testWidgets('关闭控制器会取消挂起的电脑思考计时', (tester) async {
+    final controller = build(
+      mode: PlayMode.vsAi,
+      humanSeat: 1,
+      aiDelay: const Duration(milliseconds: 300),
+    );
+    controller.start();
+    expect(controller.isAiThinking, isTrue);
+
+    controller.dispose();
+    // 若计时器没取消，测试结束时会以 pending timer 失败。
+  });
+
+  testWidgets('关闭控制器会取消提示自动收起计时', (tester) async {
+    final controller = build();
+    controller.start();
+    controller.requestHint();
+    expect(controller.hintMove, isNotNull);
+
+    controller.dispose();
+  });
+
+  testWidgets('悔棋会取消挂起的电脑思考计时', (tester) async {
+    final controller = build(
+      mode: PlayMode.vsAi,
+      difficulty: Difficulty.easy,
+      aiDelay: const Duration(milliseconds: 300),
+    );
+    controller.start();
+    final moves = CheckersRules(controller.geometry).legalMoves(controller.board, 0);
+    controller.applyMove(moves.first);
+    expect(controller.isAiThinking, isTrue);
+
+    controller.undo();
     expect(controller.isAiThinking, isFalse);
     controller.dispose();
   });
@@ -160,8 +189,7 @@ void main() {
 
     final hint = controller.hintMove;
     expect(hint, isNotNull);
-    final legal = CheckersRules(controller.geometry)
-        .legalMoves(controller.board, 0);
+    final legal = CheckersRules(controller.geometry).legalMoves(controller.board, 0);
     expect(legal.map((move) => move.to), contains(hint!.to));
 
     controller.applyMove(hint);
@@ -171,8 +199,7 @@ void main() {
   test('重开后回到开局，再次落子重新计数', () {
     final controller = build();
     controller.start();
-    final moves = CheckersRules(controller.geometry)
-        .legalMoves(controller.board, 0);
+    final moves = CheckersRules(controller.geometry).legalMoves(controller.board, 0);
     controller.applyMove(moves.first);
     controller.restart();
 
@@ -185,17 +212,12 @@ void main() {
   test('每种人数与座位组合都有合法开局着法', () {
     for (final count in PlayerCount.values) {
       for (final seat in [0, count.count - 1]) {
-        final controller = build(
-          mode: PlayMode.vsAi,
-          count: count,
-          humanSeat: seat,
-        );
+        final controller = build(mode: PlayMode.vsAi, count: count, humanSeat: seat);
         expect(controller.setup.targetArmOf(seat), isNot(seat));
         expect(controller.progressOf(seat), 0);
         for (var player = 0; player < count.count; player++) {
           expect(
-            CheckersRules(controller.geometry)
-                .legalMoves(controller.board, player),
+            CheckersRules(controller.geometry).legalMoves(controller.board, player),
             isNotEmpty,
           );
         }
@@ -209,9 +231,7 @@ void main() {
     controller.start();
     final rules = CheckersRules(controller.geometry);
     for (var i = 0; i < 2; i++) {
-      controller.applyMove(
-        rules.legalMoves(controller.board, controller.currentSeat).first,
-      );
+      controller.applyMove(rules.legalMoves(controller.board, controller.currentSeat).first);
     }
     expect(controller.quietPlies, 2);
 
@@ -233,9 +253,7 @@ void main() {
     final other = controller.board
         .holesOf(0)
         .firstWhere(
-          (hole) =>
-              hole != hint.from &&
-              rules.movesFrom(controller.board, hole).isNotEmpty,
+          (hole) => hole != hint.from && rules.movesFrom(controller.board, hole).isNotEmpty,
         );
     controller.tapHole(other);
 
@@ -254,9 +272,7 @@ void main() {
         aiDelay: Duration.zero,
       );
       controller.start();
-      final first = CheckersRules(controller.geometry)
-          .legalMoves(controller.board, 0)
-          .first;
+      final first = CheckersRules(controller.geometry).legalMoves(controller.board, 0).first;
       if (withHint) controller.requestHint();
       controller.applyMove(first);
       await Future<void>.delayed(const Duration(milliseconds: 40));

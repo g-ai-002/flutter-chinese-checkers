@@ -17,13 +17,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   final geometry = BoardGeometry.star();
-  const hudKeys = <String>[
-    'hud-title',
-    'hud-status',
-    'hud-tools',
-    'hud-progress',
-    'hud-actions',
-  ];
+  const hudKeys = <String>['hud-title', 'hud-status', 'hud-tools', 'hud-progress', 'hud-actions'];
 
   Future<void> pumpGame(
     WidgetTester tester,
@@ -85,16 +79,8 @@ void main() {
       }
       expect(entry.value.left, greaterThan(-0.5), reason: '${entry.key} 越界');
       expect(entry.value.top, greaterThan(-0.5), reason: '${entry.key} 越界');
-      expect(
-        entry.value.right,
-        lessThan(size.width + 0.5),
-        reason: '${entry.key} 越界',
-      );
-      expect(
-        entry.value.bottom,
-        lessThan(size.height + 0.5),
-        reason: '${entry.key} 越界',
-      );
+      expect(entry.value.right, lessThan(size.width + 0.5), reason: '${entry.key} 越界');
+      expect(entry.value.bottom, lessThan(size.height + 0.5), reason: '${entry.key} 越界');
     }
   }
 
@@ -120,10 +106,22 @@ void main() {
     expect(board.right, lessThanOrEqualTo(size.width + 0.5));
   }
 
+  /// 棋盘始终居中：水平正中，垂直偏差不超过一成的窗口高度。
+  void expectBoardCentered(WidgetTester tester, Size size) {
+    final board = tester.getRect(find.byKey(const ValueKey('board')));
+    expect(board.center.dx, closeTo(size.width / 2, 1), reason: '棋盘应水平居中');
+    expect(
+      (board.center.dy - size.height / 2).abs(),
+      lessThan(size.height * 0.12),
+      reason: '棋盘应尽量居中',
+    );
+  }
+
   void audit(WidgetTester tester, Size size) {
     expectHudClearOfHoles(tester, size);
     expectHudApart(tester);
     expectBoardFit(tester, size);
+    expectBoardCentered(tester, size);
     expect(tester.takeException(), isNull);
   }
 
@@ -167,6 +165,38 @@ void main() {
       });
     }
   }
+
+  testWidgets('手机把操作坞放在棋盘下方，与进度面板同一行居中', (tester) async {
+    const size = Size(360, 780);
+    await pumpGame(tester, size);
+
+    final board = tester.getRect(find.byKey(const ValueKey('board')));
+    final progress = tester.getRect(find.byKey(const ValueKey('hud-progress')));
+    final actions = tester.getRect(find.byKey(const ValueKey('hud-actions')));
+    expect(progress.top, greaterThan(board.bottom), reason: '进度在棋盘下方');
+    expect(actions.top, greaterThan(board.bottom), reason: '操作坞在棋盘下方');
+    expect(progress.right, lessThan(actions.left), reason: '进度在操作坞左侧');
+    expect(
+      (progress.left + actions.right) / 2,
+      closeTo(board.center.dx, 1.5),
+      reason: '进度与操作坞整行居中于棋盘',
+    );
+
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('残局页不占进度位，操作坞居中于棋盘下方', (tester) async {
+    const size = Size(390, 844);
+    await pumpGame(tester, size, challenge: true);
+
+    expect(find.byKey(const ValueKey('hud-progress')), findsNothing);
+    final board = tester.getRect(find.byKey(const ValueKey('board')));
+    final actions = tester.getRect(find.byKey(const ValueKey('hud-actions')));
+    expect(actions.top, greaterThan(board.bottom));
+    expect(actions.center.dx, closeTo(board.center.dx, 1.5));
+
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
 
   testWidgets('竖屏手机把信息放进上下信息带，进度面板保留', (tester) async {
     const size = Size(320, 568);
