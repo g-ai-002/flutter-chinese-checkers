@@ -5,7 +5,8 @@
 def useMirrorProxy = System.getenv('USE_MIRRORPROXY') == 'true'
 
 if (useMirrorProxy) {
-    def mirrorMaven = 'http://192.168.31.120:1001/maven/'
+    // 镜像地址可用 MIRRORPROXY_URL 覆盖，未设置时用内网 mirrorproxy
+    def mirrorMaven = System.getenv('MIRRORPROXY_URL') ?: 'http://192.168.31.120:1001/maven/'
 
     // 为所有 Settings（含 included builds）配置 pluginManagement 和 dependencyResolutionManagement
     // AGP 9.x 默认 PREFER_SETTINGS 模式，禁止 project 级别 repositories，必须在 settings 级别配置

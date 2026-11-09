@@ -12,7 +12,7 @@ pluginManagement {
     repositories {
         if (System.getenv('USE_MIRRORPROXY') == 'true') {
             maven {
-                url 'http://192.168.31.120:1001/maven/'
+                url System.getenv('MIRRORPROXY_URL') ?: 'http://192.168.31.120:1001/maven/'
                 allowInsecureProtocol = true
             }
         }
