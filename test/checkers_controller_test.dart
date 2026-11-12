@@ -240,6 +240,38 @@ void main() {
     expect(controller.quietPlies, 1);
   });
 
+  test('禁用悔棋的玩法不再保存悔棋快照', () {
+    final controller = CheckersController(
+      setup: const GameSetup(mode: PlayMode.local, playerCount: PlayerCount.two),
+      allowUndo: false,
+    );
+    controller.start();
+    controller.applyMove(
+      CheckersRules(controller.geometry).legalMoves(controller.board, 0).first,
+    );
+
+    expect(controller.canUndo, isFalse);
+    expect(controller.undoDepth, 0);
+    controller.undo();
+    expect(controller.history, hasLength(1));
+    controller.dispose();
+  });
+
+  test('电脑接管时落子只通知界面一次', () {
+    final controller = build(mode: PlayMode.vsAi, difficulty: Difficulty.easy);
+    controller.start();
+    var notifications = 0;
+    controller.addListener(() => notifications++);
+
+    controller.applyMove(
+      CheckersRules(controller.geometry).legalMoves(controller.board, 0).first,
+    );
+
+    expect(controller.isAiThinking, isTrue);
+    expect(notifications, 1);
+    controller.dispose();
+  });
+
   test('选中另一枚棋子时清除上一枚棋子的提示', () {
     final controller = build();
     controller.start();

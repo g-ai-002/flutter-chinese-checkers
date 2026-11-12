@@ -109,11 +109,13 @@ class CheckersController extends ChangeNotifier implements BoardSource {
 
   CheckersMove? get lastMove => history.isEmpty ? null : history.last.move;
 
-  Set<int> get targetHoles => _movesByTarget.keys.toSet();
-
   /// 连续多少手没有新棋子进营，供测试校验悔棋后的恢复。
   @visibleForTesting
   int get quietPlies => _quietPlies;
+
+  /// 已保存的悔棋快照数，用于确认禁用悔棋的玩法不再拷贝棋盘。
+  @visibleForTesting
+  int get undoDepth => _undoStack.length;
 
   Duration get _elapsed =>
       _startedAt == null ? Duration.zero : DateTime.now().difference(_startedAt!);
@@ -189,16 +191,19 @@ class CheckersController extends ChangeNotifier implements BoardSource {
 
   void applyMove(CheckersMove move) {
     if (_disposed) return;
-    _undoStack.add(
-      _Snapshot(
-        cells: List<int>.of(board.cells),
-        seat: currentSeat,
-        historyLength: history.length,
-        quietPlies: _quietPlies,
-        winner: winner,
-        isDraw: isDraw,
-      ),
-    );
+    // 残局等禁用悔棋的玩法不需要快照，省掉每次落子的整盘拷贝。
+    if (allowUndo) {
+      _undoStack.add(
+        _Snapshot(
+          cells: List<int>.of(board.cells),
+          seat: currentSeat,
+          historyLength: history.length,
+          quietPlies: _quietPlies,
+          winner: winner,
+          isDraw: isDraw,
+        ),
+      );
+    }
     final progressBefore = progressOf(currentSeat);
     board.move(move.from, move.to);
     history.add(MoveRecord(seat: currentSeat, move: move));
@@ -233,8 +238,9 @@ class CheckersController extends ChangeNotifier implements BoardSource {
       _endGame(message: '对局判和: 所有玩家均无合法着法');
       return;
     }
+    // 电脑接管标记先落定，界面随落子只重建一次。
+    _scheduleAiIfNeeded(notify: false);
     notifyListeners();
-    _scheduleAiIfNeeded();
   }
 
   /// 统一收尾：记录结果、冻结用时并通知界面。
@@ -258,12 +264,12 @@ class CheckersController extends ChangeNotifier implements BoardSource {
     return true;
   }
 
-  void _scheduleAiIfNeeded() {
+  void _scheduleAiIfNeeded({bool notify = true}) {
     if (_disposed || isFinished) return;
     if (!setup.isAi(currentSeat)) return;
     final epoch = ++_epoch;
     isAiThinking = true;
-    notifyListeners();
+    if (notify) notifyListeners();
     _aiTimer?.cancel();
     _aiTimer = Timer(aiDelay, () {
       _aiTimer = null;
@@ -289,8 +295,8 @@ class CheckersController extends ChangeNotifier implements BoardSource {
       _endGame(message: '对局判和: 所有玩家均无合法着法');
       return;
     }
+    _scheduleAiIfNeeded(notify: false);
     notifyListeners();
-    _scheduleAiIfNeeded();
   }
 
   /// 悔棋：同屏模式退一手；人机模式回退到上一次自己走棋之前。
@@ -311,8 +317,8 @@ class CheckersController extends ChangeNotifier implements BoardSource {
     }
     _clearSelection();
     hintMove = null;
+    _scheduleAiIfNeeded(notify: false);
     notifyListeners();
-    _scheduleAiIfNeeded();
   }
 
   void _restore(_Snapshot snapshot) {
