@@ -204,6 +204,93 @@ void main() {
     controller.dispose();
     theme.dispose();
   });
+
+  test('走子动画期间静止棋子层只录一次', () async {
+    const six = GameSetup(mode: PlayMode.local, playerCount: PlayerCount.six);
+    final controller = CheckersController(setup: six);
+    final theme = ValueNotifier<BoardTheme>(kBoardThemes.first);
+    final board = BoardComponent(
+      source: controller,
+      theme: theme,
+      showHints: false,
+    );
+    await board.onLoad();
+    board.size = Vector2(900, 1028);
+    board.update(0);
+
+    _render(board);
+    final builds = board.animLayerBuilds;
+
+    controller.applyMove(controller.rules.legalMoves(controller.board, 0).first);
+    board.update(0);
+    _render(board);
+    expect(board.isAnimating, isTrue);
+    expect(board.animLayerBuilds, builds + 1);
+
+    // 同一段动画的后续帧直接复用这一层，不再逐枚重绘全部棋子。
+    for (var i = 0; i < 5; i++) {
+      board.update(0.02);
+      _render(board);
+    }
+    expect(board.animLayerBuilds, builds + 1);
+
+    // 动画结束后回到静止棋子层；下一手动画重新录一层。
+    board.update(10);
+    _render(board);
+    expect(board.isAnimating, isFalse);
+
+    final next = controller.rules.legalMoves(
+      controller.board,
+      controller.currentSeat,
+    ).first;
+    controller.applyMove(next);
+    board.update(0);
+    _render(board);
+    expect(board.animLayerBuilds, builds + 2);
+
+    board.update(10);
+    _render(board);
+    expect(board.animLayerBuilds, builds + 2);
+
+    controller.dispose();
+    theme.dispose();
+  });
+
+  test('选中呼吸高亮限时，淡出后不再请求帧', () async {
+    final controller = CheckersController(setup: setup);
+    final theme = ValueNotifier<BoardTheme>(kBoardThemes.first);
+    final board = BoardComponent(
+      source: controller,
+      theme: theme,
+      showHints: false,
+    );
+    await board.onLoad();
+    board.size = Vector2(680, 777);
+    board.update(0);
+
+    controller.tapHole(controller.board.holesOf(0).first);
+    expect(board.wantsFrames, isTrue);
+
+    board.update(0.5);
+    expect(board.wantsFrames, isTrue);
+
+    board.update(BoardComponent.selectionPulseSeconds);
+    expect(board.wantsFrames, isFalse);
+
+    // 换一枚棋子会重新开始高亮。
+    final other = controller.board.holesOf(0).last;
+    controller.tapHole(other);
+    expect(board.wantsFrames, isTrue);
+    board.update(0);
+    expect(board.wantsFrames, isTrue);
+
+    // 高亮淡出后同样不再请求帧。
+    board.update(BoardComponent.selectionPulseSeconds);
+    expect(board.wantsFrames, isFalse);
+
+    controller.dispose();
+    theme.dispose();
+  });
 }
 
 void _render(BoardComponent board) {

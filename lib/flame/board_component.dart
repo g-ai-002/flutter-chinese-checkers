@@ -29,15 +29,20 @@ class BoardComponent extends PositionComponent with TapCallbacks {
   final ValueListenable<BoardTheme> theme;
   final bool showHints;
 
+  /// 选中呼吸高亮的持续秒数：之后保持静态，空闲时不再满帧重绘。
+  static const double selectionPulseSeconds = 3.0;
+
   double _scale = 0;
   Offset _origin = Offset.zero;
-  double _rotation = 0;
+  late final double _rotation = _rotationForHome();
   int _seenHistory = 0;
   late final double _leadIn =
       source.animationLeadIn.inMicroseconds / Duration.microsecondsPerSecond;
   late CheckersBoard _mirror;
   final MoveAnimator _animator = MoveAnimator();
   double _time = 0;
+  int? _pulseHole;
+  double _pulseStart = 0;
 
   double _cacheScale = 0;
   ui.Picture? _boardLayer;
@@ -52,12 +57,20 @@ class BoardComponent extends PositionComponent with TapCallbacks {
   double _piecesScale = 0;
   int _piecesBuilds = 0;
 
+  /// 动画期间的静止棋子层：整段动画只录一次，每帧与移动中的棋子叠加。
+  ui.Picture? _animLayer;
+  List<int>? _animLayerCells;
+  BoardTheme? _animLayerTheme;
+  double _animLayerScale = 0;
+  int _animLayerBuilds = 0;
+
   BoardGeometry get _geometry => source.geometry;
 
   @override
   Future<void> onLoad() async {
     _mirror = source.board.copy();
     _seenHistory = source.history.length;
+    _pulseHole = source.selectedHole;
     theme.addListener(_invalidate);
   }
 
@@ -67,6 +80,7 @@ class BoardComponent extends PositionComponent with TapCallbacks {
     _animator.clear();
     _disposeLayers();
     _disposePieces();
+    _disposeAnimLayer();
     super.onRemove();
   }
 
@@ -75,6 +89,7 @@ class BoardComponent extends PositionComponent with TapCallbacks {
     _spriteScale = 0;
     _disposeLayers();
     _disposePieces();
+    _disposeAnimLayer();
     for (final sprite in _sprites.values) {
       sprite.dispose();
     }
@@ -93,12 +108,27 @@ class BoardComponent extends PositionComponent with TapCallbacks {
     _piecesHistory = -1;
   }
 
+  void _disposeAnimLayer() {
+    _animLayer?.dispose();
+    _animLayer = null;
+    _animLayerCells = null;
+  }
+
   @override
   void update(double dt) {
     super.update(dt);
     _time += dt;
+    _trackSelection();
     _syncHistory();
     _animator.advance(dt);
+  }
+
+  /// 记住本次选子从哪一刻开始：呼吸高亮只持续 [selectionPulseSeconds]。
+  void _trackSelection() {
+    final hole = source.selectedHole;
+    if (hole == _pulseHole) return;
+    _pulseHole = hole;
+    _pulseStart = _time;
   }
 
   /// 把棋盘源新增的着法补进动画队列，每手保存走完后的局面快照。
@@ -142,9 +172,9 @@ class BoardComponent extends PositionComponent with TapCallbacks {
         sprite.dispose();
       }
       _sprites.clear();
+      _disposeAnimLayer();
     }
     _spriteScale = scale;
-    _rotation = _rotationForHome();
     _ensureLayers(scale);
 
     final anim = _animator.current;
@@ -319,10 +349,12 @@ class BoardComponent extends PositionComponent with TapCallbacks {
         ..strokeWidth = _scale * 0.07,
     );
     final pulse = 0.5 + 0.5 * math.sin(_time * 3.4);
+    final elapsed = _pulseHole == hole ? _time - _pulseStart : 0.0;
+    final settle = 1 - (elapsed / selectionPulseSeconds).clamp(0.0, 1.0);
     canvas.drawCircle(
       center,
-      radius + _scale * (0.06 + pulse * 0.03),
-      Paint()..color = style.light.withValues(alpha: 0.18 + pulse * 0.12),
+      radius + _scale * (0.06 + pulse * 0.03 * settle),
+      Paint()..color = style.light.withValues(alpha: 0.18 + pulse * settle * 0.12),
     );
   }
 
@@ -361,8 +393,11 @@ class BoardComponent extends PositionComponent with TapCallbacks {
 
   /// 可落点：单步画小圆点，连跳落点画双环，方便区分。
   void _drawTargets(Canvas canvas) {
-    if (!showHints || source.targets.isEmpty) return;
-    for (final entry in source.targets.entries) {
+    if (!showHints) return;
+    // 每帧只取一次快照，避免重复复制可落点表。
+    final targets = source.targets;
+    if (targets.isEmpty) return;
+    for (final entry in targets.entries) {
       final center = _point(entry.key);
       final jump = entry.value.jumpCount > 0;
       if (jump) {
@@ -441,21 +476,44 @@ class BoardComponent extends PositionComponent with TapCallbacks {
     if (anim == null) {
       _ensurePieces();
       final layer = _piecesLayer;
-      if (layer != null) {
-        canvas.drawPicture(layer);
-        return;
-      }
+      if (layer != null) canvas.drawPicture(layer);
+      return;
     }
-    final hiddenHole = anim?.move.to;
+    // 动画期间静止棋子整层复用，每帧只额外画移动中的那一枚。
+    canvas.drawPicture(_ensureAnimLayer(anim));
+    final lift = _animLift(anim);
+    _drawPiece(canvas, _animPosition(anim) - Offset(0, lift), cells[anim.move.to]);
+  }
+
+  /// 录制动画期间的静止棋子层：排除正在移动的那一枚。
+  ///
+  /// 整段动画（含连跳的每一跳）只录一次，之后每帧直接复用，
+  /// 避免 6 人局每帧重复数十次棋子绘制。
+  ui.Picture _ensureAnimLayer(MoveAnimation anim) {
+    final cached = _animLayer;
+    final cells = anim.cells;
+    if (cached != null &&
+        identical(_animLayerCells, cells) &&
+        (_animLayerScale - _scale).abs() < 0.001 &&
+        _animLayerTheme == theme.value) {
+      return cached;
+    }
+    _disposeAnimLayer();
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    final hidden = anim.move.to;
     for (var hole = 0; hole < cells.length; hole++) {
       final seat = cells[hole];
-      if (seat < 0 || hole == hiddenHole) continue;
+      if (seat < 0 || hole == hidden) continue;
       _drawPiece(canvas, _point(hole), seat);
     }
-    if (anim == null) return;
-    final position = _animPosition(anim);
-    final lift = _animLift(anim);
-    _drawPiece(canvas, position - Offset(0, lift), cells[anim.move.to]);
+    final layer = recorder.endRecording();
+    _animLayer = layer;
+    _animLayerCells = cells;
+    _animLayerTheme = theme.value;
+    _animLayerScale = _scale;
+    _animLayerBuilds++;
+    return layer;
   }
 
   /// 局面静止时把全部棋子录成一张 Picture。
@@ -617,8 +675,21 @@ class BoardComponent extends PositionComponent with TapCallbacks {
   @visibleForTesting
   int get pieceLayerBuilds => _piecesBuilds;
 
-  /// 当前是否需要持续刷新：走子动画或选中棋子的呼吸高亮。
-  bool get wantsFrames => _animator.isAnimating || source.selectedHole != null;
+  /// 动画层重新录制的次数，用于验证整段动画只录一次。
+  @visibleForTesting
+  int get animLayerBuilds => _animLayerBuilds;
+
+  /// 当前是否需要持续刷新：走子动画，或选中棋子仍在呼吸高亮。
+  ///
+  /// 高亮淡出后不再请求帧，空闲检测才能停掉渲染循环。
+  bool get wantsFrames {
+    if (_animator.isAnimating) return true;
+    final hole = source.selectedHole;
+    if (hole == null) return false;
+    // 刚选中的棋子还没经过 update，先按高亮起点计时。
+    if (hole != _pulseHole) return true;
+    return _time - _pulseStart < selectionPulseSeconds;
+  }
 
   @visibleForTesting
   bool get isAnimating => _animator.isAnimating;
