@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../game/challenge_levels.dart';
 import '../../game/checkers_controller.dart';

@@ -5,8 +5,8 @@ import 'package:chinese_checkers/game/checkers_controller.dart';
 import 'package:chinese_checkers/models/game_models.dart';
 import 'package:chinese_checkers/theme/app_theme.dart';
 import 'package:flame/game.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

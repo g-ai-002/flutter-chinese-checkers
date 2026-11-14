@@ -1,6 +1,6 @@
 import 'package:chinese_checkers/pages/widgets/confirm_dialog.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 
 void main() {
   testWidgets('确认浮层展示标题、说明与自定义按钮', (tester) async {

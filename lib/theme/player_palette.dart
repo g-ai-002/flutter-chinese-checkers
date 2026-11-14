@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// 六位玩家的固定配色：两人局取红/蓝，三人局取红/蓝/绿，四种颜色足够区分。
 class PlayerStyle {

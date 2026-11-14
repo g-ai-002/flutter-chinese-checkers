@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:chinese_checkers/utils/system_ui.dart';
+import 'package:material_ui/material_ui.dart';
 
 void main() {
   test('浅色底色配深色状态栏与导航栏图标', () {

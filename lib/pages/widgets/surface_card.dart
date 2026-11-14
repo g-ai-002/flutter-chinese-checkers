@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// 统一的面板容器：标题 + 可选右侧操作 + 内容。
 ///
