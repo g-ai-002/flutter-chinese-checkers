@@ -21,8 +21,8 @@ const double _contentHalfHeight = 8.0;
 const double _pieceRadius = 0.4;
 const double _holeRadius = 0.44;
 
-/// 单枚棋子的绘制方框，四周留出一点阴影与高光。
-const double _pieceBox = 1.4;
+/// 单枚棋子贴图的方框（单位：孔距），比绘制方框略大，旋转后阴影不会被裁掉。
+const double _spriteBox = 1.6;
 
 /// Flame 棋盘组件：绘制六角星棋盘、棋子、可走提示与走子动画，并处理点击。
 class BoardComponent extends PositionComponent with TapCallbacks {
@@ -35,9 +35,17 @@ class BoardComponent extends PositionComponent with TapCallbacks {
   /// 选中呼吸高亮的持续秒数：之后保持静态，空闲时不再满帧重绘。
   static const double selectionPulseSeconds = 3.0;
 
+  /// 单张贴图的最大像素数；更大的窗口退回 Picture 重放，避免分配超大纹理。
+  static const int maxRasterPixels = 8 * 1024 * 1024;
+
   double _scale = 0;
+
+  /// 当前渲染的物理像素比例：贴图按物理像素光栅化，绘制时保持 1:1。
+  double _pixelRatio = 1;
   Offset _origin = Offset.zero;
   late final double _rotation = _rotationForHome();
+  late final double _cosRotation = math.cos(_rotation);
+  late final double _sinRotation = math.sin(_rotation);
   int _seenHistory = 0;
   late final double _leadIn =
       source.animationLeadIn.inMicroseconds / Duration.microsecondsPerSecond;
@@ -47,25 +55,27 @@ class BoardComponent extends PositionComponent with TapCallbacks {
   int? _pulseHole;
   double _pulseStart = 0;
 
-  /// 静态层统一按「孔距 = 1」的模型坐标录制，渲染时再整体缩放。
-  ///
-  /// 这样窗口尺寸变化只需换一个矩阵，不必重录 121 个孔位与棋子精灵。
+  /// 底板按「孔距 = 1」的模型坐标录制，窗口尺寸变化只需换一个矩阵。
   ui.Picture? _boardLayer;
   int _boardBuilds = 0;
-  final Map<int, ui.Picture> _sprites = {};
 
-  /// 棋子层按当前局面录成一张 Picture，静止时不再逐枚绘制。
-  ui.Picture? _piecesLayer;
-  CheckersBoard? _piecesBoard;
-  int _piecesHistory = -1;
-  BoardTheme? _piecesTheme;
-  int _piecesBuilds = 0;
+  /// 底板贴图：重放 Picture 每帧都要重新光栅化 121 个渐变孔位与底板柔光，
+  /// 换成贴图后每帧只剩一次 1:1 的矩形绘制。窗口还在连续缩放时先继续重放
+  /// Picture，等同一尺寸出现两帧再升级成贴图，避免拖动窗口时每帧新建纹理。
+  ui.Image? _boardImage;
+  double _boardImageScale = 0;
+  double? _boardPendingScale;
+  int _boardRasters = 0;
 
-  /// 动画期间的静止棋子层：整段动画只录一次，每帧与移动中的棋子叠加。
-  ui.Picture? _animLayer;
-  List<int>? _animLayerCells;
-  BoardTheme? _animLayerTheme;
-  int _animLayerBuilds = 0;
+  /// 棋子原型与贴图：整盘棋子改为逐枚画小贴图，不再录整盘棋子层与动画层；
+  /// 窗口缩放只重做最多 6 张小图，走子动画每帧只补画移动中的那一枚。
+  final Map<int, ui.Picture> _spritePictures = {};
+  final Map<int, ui.Image> _sprites = {};
+  double _spritePixels = 0;
+  int _spriteRasters = 0;
+
+  final Paint _boardPaint = Paint()..filterQuality = FilterQuality.none;
+  final Paint _spritePaint = Paint()..filterQuality = FilterQuality.none;
 
   BoardGeometry get _geometry => source.geometry;
 
@@ -81,38 +91,38 @@ class BoardComponent extends PositionComponent with TapCallbacks {
   void onRemove() {
     theme.removeListener(_invalidate);
     _animator.clear();
-    _disposeLayers();
-    _disposePieces();
-    _disposeAnimLayer();
+    _disposeBoardLayer();
+    _disposeSpriteImages();
+    for (final picture in _spritePictures.values) {
+      picture.dispose();
+    }
+    _spritePictures.clear();
     super.onRemove();
   }
 
   void _invalidate() {
-    _disposeLayers();
-    _disposePieces();
-    _disposeAnimLayer();
-    for (final sprite in _sprites.values) {
-      sprite.dispose();
-    }
-    _sprites.clear();
+    // 棋子贴图只跟座位配色有关，换棋盘配色不必重做。
+    _disposeBoardLayer();
   }
 
-  void _disposeLayers() {
+  void _disposeBoardLayer() {
     _boardLayer?.dispose();
     _boardLayer = null;
+    _disposeBoardImage();
   }
 
-  void _disposePieces() {
-    _piecesLayer?.dispose();
-    _piecesLayer = null;
-    _piecesBoard = null;
-    _piecesHistory = -1;
+  void _disposeBoardImage() {
+    _boardImage?.dispose();
+    _boardImage = null;
+    _boardImageScale = 0;
+    _boardPendingScale = null;
   }
 
-  void _disposeAnimLayer() {
-    _animLayer?.dispose();
-    _animLayer = null;
-    _animLayerCells = null;
+  void _disposeSpriteImages() {
+    for (final image in _sprites.values) {
+      image.dispose();
+    }
+    _sprites.clear();
   }
 
   @override
@@ -167,27 +177,112 @@ class BoardComponent extends PositionComponent with TapCallbacks {
     final scale = math.min(size.x / (_contentHalfWidth * 2), size.y / (_contentHalfHeight * 2));
     if (scale <= 0) return;
     _scale = scale;
+    _pixelRatio = ui.PlatformDispatcher.instance.implicitView?.devicePixelRatio ?? 1;
     _origin = Offset(size.x / 2, size.y / 2);
     _ensureLayers();
 
     final anim = _animator.current;
     final cells = anim?.cells ?? source.board.cells;
+    _drawBoard(canvas);
+    if (anim == null) {
+      _inModelSpace(canvas, () {
+        _drawSelection(canvas, cells);
+        _drawTargets(canvas);
+        _drawHint(canvas);
+      });
+    } else if (anim.previewing) {
+      _inModelSpace(canvas, () => _drawCue(canvas, anim));
+    }
+    _drawPieces(canvas, cells, anim);
+  }
+
+  /// 在「孔距 = 1」的模型坐标里绘制，静态贴图与矢量提示共用同一套孔位。
+  void _inModelSpace(Canvas canvas, VoidCallback draw) {
     canvas
       ..save()
       ..translate(_origin.dx, _origin.dy)
       ..rotate(_rotation)
-      ..scale(scale);
-    final layer = _boardLayer;
-    if (layer != null) canvas.drawPicture(layer);
-    if (anim == null) {
-      _drawSelection(canvas, cells);
-      _drawTargets(canvas);
-      _drawHint(canvas);
-    } else if (anim.previewing) {
-      _drawCue(canvas, anim);
-    }
-    _drawPieces(canvas, cells, anim);
+      ..scale(_scale);
+    draw();
     canvas.restore();
+  }
+
+  /// 把模型坐标录制的 Picture 光栅化成贴图。
+  ///
+  /// [transform] 负责把模型坐标摆进贴图像素坐标（含棋盘旋转），之后按 1:1
+  /// 绘制时与直接重放 Picture 的画面一致。
+  ui.Image _rasterize(
+    ui.Picture picture,
+    int width,
+    int height,
+    void Function(Canvas canvas) transform,
+  ) {
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    transform(canvas);
+    canvas.drawPicture(picture);
+    final wrapper = recorder.endRecording();
+    final image = wrapper.toImageSync(width, height);
+    wrapper.dispose();
+    return image;
+  }
+
+  void _drawBoard(Canvas canvas) {
+    final layer = _boardLayer;
+    if (layer == null) return;
+    final image = _boardRaster();
+    if (image == null) {
+      _inModelSpace(canvas, () => canvas.drawPicture(layer));
+      return;
+    }
+    _blit(canvas, image, _origin, _boardPaint);
+  }
+
+  /// 按物理像素 1:1 画出贴图：贴图按当前像素尺寸光栅化，不能再被缩放。
+  void _blit(Canvas canvas, ui.Image image, Offset center, Paint paint) {
+    canvas.drawImageRect(
+      image,
+      Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+      Rect.fromCenter(
+        center: center,
+        width: image.width / _pixelRatio,
+        height: image.height / _pixelRatio,
+      ),
+      paint,
+    );
+  }
+
+  /// 底板贴图：尺寸不变时一直复用，尺寸还在连续变化时先重放 Picture。
+  ui.Image? _boardRaster() {
+    final layer = _boardLayer;
+    if (layer == null) return null;
+    final pixelScale = _scale * _pixelRatio;
+    final cached = _boardImage;
+    if (cached != null) {
+      if (_boardImageScale == pixelScale) return cached;
+      _disposeBoardImage();
+    }
+    final width = (_origin.dx * 2 * _pixelRatio).round();
+    final height = (_origin.dy * 2 * _pixelRatio).round();
+    if (width <= 0 || height <= 0 || width * height > maxRasterPixels) {
+      return null;
+    }
+    // 拖动窗口缩放时尺寸每帧都变，先用 Picture 顶上；同一尺寸出现两帧再光栅化。
+    if (_boardPendingScale != pixelScale) {
+      _boardPendingScale = pixelScale;
+      return null;
+    }
+    _boardPendingScale = null;
+    final image = _rasterize(layer, width, height, (canvas) {
+      canvas
+        ..translate(width / 2, height / 2)
+        ..rotate(_rotation)
+        ..scale(pixelScale);
+    });
+    _boardImage = image;
+    _boardImageScale = pixelScale;
+    _boardRasters++;
+    return image;
   }
 
   /// 人机对战把自己的营地转到棋盘正下方，前进方向朝上更符合直觉。
@@ -455,72 +550,29 @@ class BoardComponent extends PositionComponent with TapCallbacks {
     canvas.drawPath(path, Paint()..color = color);
   }
 
+  /// 棋子一律画小贴图：静止时逐枚贴图，动画期间跳过移动中的那一枚再补画。
+  ///
+  /// 贴图已把棋盘旋转烘进图像，因此按组件坐标 1:1 绘制，
+  /// 不再是「整盘录成一层 Picture 每帧重放」。
   void _drawPieces(Canvas canvas, List<int> cells, MoveAnimation? anim) {
-    if (anim == null) {
-      _ensurePieces();
-      final layer = _piecesLayer;
-      if (layer != null) canvas.drawPicture(layer);
-      return;
-    }
-    // 动画期间静止棋子整层复用，每帧只额外画移动中的那一枚。
-    canvas.drawPicture(_ensureAnimLayer(anim));
-    final lift = _animLift(anim);
-    _drawPiece(canvas, _animPosition(anim) - Offset(0, lift), cells[anim.move.to]);
-  }
-
-  /// 录制动画期间的静止棋子层：排除正在移动的那一枚。
-  ///
-  /// 整段动画（含连跳的每一跳）只录一次，之后每帧直接复用，
-  /// 避免 6 人局每帧重复数十次棋子绘制。
-  ui.Picture _ensureAnimLayer(MoveAnimation anim) {
-    final cached = _animLayer;
-    final cells = anim.cells;
-    if (cached != null && identical(_animLayerCells, cells) && _animLayerTheme == theme.value) {
-      return cached;
-    }
-    _disposeAnimLayer();
-    final recorder = ui.PictureRecorder();
-    final canvas = Canvas(recorder);
-    final hidden = anim.move.to;
+    final moving = anim?.move.to;
     for (var hole = 0; hole < cells.length; hole++) {
       final seat = cells[hole];
-      if (seat < 0 || hole == hidden) continue;
-      _drawPiece(canvas, _point(hole), seat);
+      if (seat < 0 || hole == moving) continue;
+      _drawPiece(canvas, _toScreen(_point(hole)), seat);
     }
-    final layer = recorder.endRecording();
-    _animLayer = layer;
-    _animLayerCells = cells;
-    _animLayerTheme = theme.value;
-    _animLayerBuilds++;
-    return layer;
+    if (anim == null) return;
+    final position = _animPosition(anim) - Offset(0, _animLift(anim));
+    _drawPiece(canvas, _toScreen(position), cells[moving!]);
   }
 
-  /// 局面静止时把全部棋子录成一张 Picture。
-  ///
-  /// 缓存键只需覆盖「棋盘对象 + 着法数 + 配色」：实时对局每走一手
-  /// 着法数都会增加，悔棋与复盘回退会换掉棋盘对象，因此不会读到旧局面。
-  void _ensurePieces() {
-    final board = source.board;
-    if (_piecesLayer != null &&
-        identical(_piecesBoard, board) &&
-        _piecesHistory == source.history.length &&
-        _piecesTheme == theme.value) {
-      return;
-    }
-    _disposePieces();
-    final recorder = ui.PictureRecorder();
-    final canvas = Canvas(recorder);
-    final cells = board.cells;
-    for (var hole = 0; hole < cells.length; hole++) {
-      final seat = cells[hole];
-      if (seat < 0) continue;
-      _drawPiece(canvas, _point(hole), seat);
-    }
-    _piecesLayer = recorder.endRecording();
-    _piecesBoard = board;
-    _piecesHistory = source.history.length;
-    _piecesTheme = theme.value;
-    _piecesBuilds++;
+  /// 模型坐标 → 组件内坐标（含旋转与缩放）。
+  Offset _toScreen(Offset model) {
+    return _origin +
+        Offset(
+          (model.dx * _cosRotation - model.dy * _sinRotation) * _scale,
+          (model.dx * _sinRotation + model.dy * _cosRotation) * _scale,
+        );
   }
 
   Offset _animPosition(MoveAnimation anim) {
@@ -546,26 +598,40 @@ class BoardComponent extends PositionComponent with TapCallbacks {
   double _ease(double t) => t * t * (3 - 2 * t);
 
   void _drawPiece(Canvas canvas, Offset center, int seat) {
-    final sprite = _pieceSprite(seat);
-    canvas.save();
-    canvas.translate(center.dx - _pieceBox / 2, center.dy - _pieceBox / 2);
-    canvas.drawPicture(sprite);
-    canvas.restore();
+    _blit(canvas, _pieceRaster(seat), center, _spritePaint);
   }
 
-  /// 单枚棋子录成小图，动画期间只做平移。
-  ui.Picture _pieceSprite(int seat) {
+  /// 单枚棋子的贴图：按像素边长缓存，窗口缩放只重做这几张小图。
+  ui.Image _pieceRaster(int seat) {
+    final pixels = math.max(8, (_spriteBox * _scale * _pixelRatio).round());
+    if (pixels != _spritePixels) {
+      _spritePixels = pixels.toDouble();
+      _disposeSpriteImages();
+    }
     final cached = _sprites[seat];
     if (cached != null) return cached;
+    final picture = _spritePictures[seat] ??= _recordSprite(seat);
+    final image = _rasterize(picture, pixels, pixels, (canvas) {
+      canvas
+        ..translate(pixels / 2, pixels / 2)
+        ..rotate(_rotation)
+        ..scale(pixels / _spriteBox);
+    });
+    _sprites[seat] = image;
+    _spriteRasters++;
+    return image;
+  }
+
+  /// 棋子原型按「孔距 = 1」、以原点为中心录制，旋转与缩放交给贴图。
+  ui.Picture _recordSprite(int seat) {
     final style = playerStyleOf(seat);
-    const box = _pieceBox;
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
-    const center = Offset(box / 2, box / 2);
+    const center = Offset.zero;
     const radius = _pieceRadius;
 
     canvas.drawCircle(
-      const Offset(0.7, 0.75),
+      center + const Offset(0, 0.05),
       radius * 1.02,
       Paint()
         ..color = Colors.black.withValues(alpha: 0.34)
@@ -612,9 +678,7 @@ class BoardComponent extends PositionComponent with TapCallbacks {
       Paint()..color = Colors.white.withValues(alpha: 0.40),
     );
 
-    final picture = recorder.endRecording();
-    _sprites[seat] = picture;
-    return picture;
+    return recorder.endRecording();
   }
 
   @override
@@ -646,17 +710,21 @@ class BoardComponent extends PositionComponent with TapCallbacks {
     }
   }
 
-  /// 棋子层重新录制的次数，用于验证静止帧复用了缓存。
-  @visibleForTesting
-  int get pieceLayerBuilds => _piecesBuilds;
-
   /// 底板层重新录制的次数，用于验证窗口缩放复用了模型坐标缓存。
   @visibleForTesting
   int get boardLayerBuilds => _boardBuilds;
 
-  /// 动画层重新录制的次数，用于验证整段动画只录一次。
+  /// 底板光栅化成贴图的次数，用于验证静止尺寸下每帧复用同一张纹理。
   @visibleForTesting
-  int get animLayerBuilds => _animLayerBuilds;
+  int get boardRasters => _boardRasters;
+
+  /// 棋子贴图光栅化的次数，用于验证整组棋子共用几张缓存贴图。
+  @visibleForTesting
+  int get spriteRasters => _spriteRasters;
+
+  /// 当前是否已经用贴图绘制底板（而不是重放 Picture）。
+  @visibleForTesting
+  bool get boardRasterized => _boardImage != null;
 
   /// 当前是否需要持续刷新：走子动画，或选中棋子仍在呼吸高亮。
   ///

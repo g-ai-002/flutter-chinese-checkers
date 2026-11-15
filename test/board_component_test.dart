@@ -11,7 +11,6 @@ import 'package:chinese_checkers/theme/app_theme.dart';
 import 'package:flame/components.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:material_ui/material_ui.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -37,11 +36,7 @@ void main() {
     ReplayController source,
     ValueNotifier<BoardTheme> theme,
   ) async {
-    final board = BoardComponent(
-      source: source,
-      theme: theme,
-      showHints: false,
-    );
+    final board = BoardComponent(source: source, theme: theme, showHints: false);
     await board.onLoad();
     board.update(0);
     return board;
@@ -50,11 +45,7 @@ void main() {
   test('实时对局的新增着法全部进入动画队列', () async {
     final controller = CheckersController(setup: setup);
     final theme = ValueNotifier<BoardTheme>(kBoardThemes.first);
-    final board = BoardComponent(
-      source: controller,
-      theme: theme,
-      showHints: false,
-    );
+    final board = BoardComponent(source: controller, theme: theme, showHints: false);
     await board.onLoad();
     board.update(0);
     expect(board.isAnimating, isFalse);
@@ -142,11 +133,7 @@ void main() {
     replay.dispose();
 
     final controller = CheckersController(setup: setup);
-    final live = BoardComponent(
-      source: controller,
-      theme: theme,
-      showHints: false,
-    );
+    final live = BoardComponent(source: controller, theme: theme, showHints: false);
     await live.onLoad();
     live.update(0);
     final move = controller.rules.legalMoves(controller.board, 0).first;
@@ -160,126 +147,146 @@ void main() {
     theme.dispose();
   });
 
-  test('静止帧复用棋子层，局面变化后重新录制', () async {
+  test('静止帧复用棋子贴图，走子后不再重建', () async {
     final controller = CheckersController(setup: setup);
     final theme = ValueNotifier<BoardTheme>(kBoardThemes.first);
-    final board = BoardComponent(
-      source: controller,
-      theme: theme,
-      showHints: true,
-    );
+    final board = BoardComponent(source: controller, theme: theme, showHints: true);
     await board.onLoad();
     board.size = Vector2(680, 777);
     board.update(0);
 
     _render(board);
-    final builds = board.pieceLayerBuilds;
-    expect(builds, 1);
+    final sprites = board.spriteRasters;
+    expect(sprites, 2);
     _render(board);
     _render(board);
-    expect(board.pieceLayerBuilds, builds);
+    expect(board.spriteRasters, sprites);
     expect(board.wantsFrames, isFalse);
 
     // 选中棋子会持续呼吸高亮，需要保持刷新。
     controller.tapHole(controller.board.holesOf(0).first);
     expect(board.wantsFrames, isTrue);
 
-    // 走子动画期间逐帧绘制，动画结束后再录一张新的棋子层。
+    // 走子后静止帧与动画帧都复用同一组棋子贴图。
     final move = controller.rules.legalMoves(controller.board, 0).first;
     controller.applyMove(move);
     board.update(0);
     expect(board.isAnimating, isTrue);
     _render(board);
-    expect(board.pieceLayerBuilds, builds);
+    expect(board.spriteRasters, sprites);
 
     board.update(10);
     _render(board);
-    expect(board.pieceLayerBuilds, builds + 1);
-
-    // 换配色后棋盘层与棋子层都要重录。
-    theme.value = kBoardThemes.last;
-    _render(board);
-    expect(board.pieceLayerBuilds, builds + 2);
+    expect(board.isAnimating, isFalse);
+    expect(board.spriteRasters, sprites);
 
     controller.dispose();
     theme.dispose();
   });
 
-  test('窗口尺寸变化时复用模型坐标层，不重录底板与棋子', () async {
+  test('窗口尺寸变化时复用模型坐标层，稳定后再换底板贴图', () async {
     final controller = CheckersController(setup: setup);
     final theme = ValueNotifier<BoardTheme>(kBoardThemes.first);
-    final board = BoardComponent(
-      source: controller,
-      theme: theme,
-      showHints: true,
-    );
+    final board = BoardComponent(source: controller, theme: theme, showHints: true);
     await board.onLoad();
     board.size = Vector2(680, 777);
     board.update(0);
 
     _render(board);
-    final boardBuilds = board.boardLayerBuilds;
-    final pieceBuilds = board.pieceLayerBuilds;
-    expect(boardBuilds, 1);
-    expect(pieceBuilds, 1);
-
-    // 拖动窗口改变尺寸只换缩放矩阵，静态层与棋子精灵继续复用。
-    board.size = Vector2(900, 1028);
     _render(board);
+    final boardBuilds = board.boardLayerBuilds;
+    final rasters = board.boardRasters;
+    expect(boardBuilds, 1);
+    expect(rasters, 1);
+    expect(board.boardRasterized, isTrue);
+
+    // 拖动窗口改变尺寸只换缩放矩阵：底板不重录，尺寸还在变时先重放 Picture。
+    board.size = Vector2(640, 731);
     _render(board);
     expect(board.boardLayerBuilds, boardBuilds);
-    expect(board.pieceLayerBuilds, pieceBuilds);
+    expect(board.boardRasterized, isFalse);
+
+    // 尺寸稳定一帧后升级成新贴图，之后每帧复用同一张。
+    _render(board);
+    expect(board.boardRasters, rasters + 1);
+    expect(board.boardRasterized, isTrue);
+    _render(board);
+    expect(board.boardRasters, rasters + 1);
+
+    // 换配色后底板重录并重新光栅化，棋子贴图不受影响。
+    final sprites = board.spriteRasters;
+    theme.value = kBoardThemes.last;
+    _render(board);
+    expect(board.boardLayerBuilds, boardBuilds + 1);
+    _render(board);
+    expect(board.boardRasters, rasters + 2);
+    expect(board.spriteRasters, sprites);
 
     controller.dispose();
     theme.dispose();
   });
 
-  test('走子动画期间静止棋子层只录一次', () async {
+  test('走子动画每帧复用底板贴图，只额外画移动中的棋子', () async {
     const six = GameSetup(mode: PlayMode.local, playerCount: PlayerCount.six);
     final controller = CheckersController(setup: six);
     final theme = ValueNotifier<BoardTheme>(kBoardThemes.first);
-    final board = BoardComponent(
-      source: controller,
-      theme: theme,
-      showHints: false,
-    );
+    final board = BoardComponent(source: controller, theme: theme, showHints: false);
     await board.onLoad();
-    board.size = Vector2(900, 1028);
+    board.size = Vector2(600, 686);
     board.update(0);
 
     _render(board);
-    final builds = board.animLayerBuilds;
+    _render(board);
+    final rasters = board.boardRasters;
+    final sprites = board.spriteRasters;
+    expect(sprites, 6);
+    expect(board.boardRasterized, isTrue);
 
     controller.applyMove(controller.rules.legalMoves(controller.board, 0).first);
     board.update(0);
     _render(board);
     expect(board.isAnimating, isTrue);
-    expect(board.animLayerBuilds, builds + 1);
 
-    // 同一段动画的后续帧直接复用这一层，不再逐枚重绘全部棋子。
+    // 整段动画的每一帧都不新建贴图。
     for (var i = 0; i < 5; i++) {
       board.update(0.02);
       _render(board);
     }
-    expect(board.animLayerBuilds, builds + 1);
+    expect(board.boardRasters, rasters);
+    expect(board.spriteRasters, sprites);
 
-    // 动画结束后回到静止棋子层；下一手动画重新录一层。
     board.update(10);
     _render(board);
     expect(board.isAnimating, isFalse);
+    expect(board.boardRasters, rasters);
 
-    final next = controller.rules.legalMoves(
-      controller.board,
-      controller.currentSeat,
-    ).first;
-    controller.applyMove(next);
+    controller.dispose();
+    theme.dispose();
+  });
+
+  test('底板贴图与直接重放 Picture 的画面一致', () async {
+    final controller = CheckersController(setup: setup);
+    final theme = ValueNotifier<BoardTheme>(kBoardThemes.first);
+    final board = BoardComponent(source: controller, theme: theme, showHints: true);
+    await board.onLoad();
+    board.size = Vector2(680, 777);
     board.update(0);
-    _render(board);
-    expect(board.animLayerBuilds, builds + 2);
 
-    board.update(10);
-    _render(board);
-    expect(board.animLayerBuilds, builds + 2);
+    // 第一帧还在重放 Picture，第二帧升级为贴图：两帧画面应几乎完全相同。
+    final vector = await _renderPixels(board);
+    expect(board.boardRasterized, isFalse);
+    final raster = await _renderPixels(board);
+    expect(board.boardRasterized, isTrue);
+
+    var maxDelta = 0;
+    var mismatched = 0;
+    for (var i = 0; i < vector.length; i++) {
+      final delta = (vector[i] - raster[i]).abs();
+      if (delta > 0) mismatched++;
+      if (delta > maxDelta) maxDelta = delta;
+    }
+    expect(maxDelta, lessThanOrEqualTo(2));
+    expect(mismatched / vector.length, lessThan(0.005));
 
     controller.dispose();
     theme.dispose();
@@ -288,11 +295,7 @@ void main() {
   test('选中呼吸高亮限时，淡出后不再请求帧', () async {
     final controller = CheckersController(setup: setup);
     final theme = ValueNotifier<BoardTheme>(kBoardThemes.first);
-    final board = BoardComponent(
-      source: controller,
-      theme: theme,
-      showHints: false,
-    );
+    final board = BoardComponent(source: controller, theme: theme, showHints: false);
     await board.onLoad();
     board.size = Vector2(680, 777);
     board.update(0);
@@ -326,4 +329,21 @@ void _render(BoardComponent board) {
   final recorder = ui.PictureRecorder();
   board.render(ui.Canvas(recorder));
   recorder.endRecording().dispose();
+}
+
+/// 按物理像素把棋盘渲染成 RGBA 字节，用于比对贴图与矢量绘制是否一致。
+Future<Uint8List> _renderPixels(BoardComponent board) async {
+  final ratio = ui.PlatformDispatcher.instance.implicitView?.devicePixelRatio ?? 1;
+  final recorder = ui.PictureRecorder();
+  final canvas = ui.Canvas(recorder)..scale(ratio);
+  board.render(canvas);
+  final picture = recorder.endRecording();
+  final image = await picture.toImage(
+    (board.size.x * ratio).round(),
+    (board.size.y * ratio).round(),
+  );
+  final data = await image.toByteData();
+  image.dispose();
+  picture.dispose();
+  return data!.buffer.asUint8List();
 }
