@@ -81,6 +81,25 @@ void main() {
     expect(controller.history, isEmpty);
   });
 
+  test('可落点表复用同一只读视图，选中与取消都实时反映', () {
+    final controller = build();
+    controller.start();
+    final rules = CheckersRules(controller.geometry);
+    final piece = controller.board
+        .holesOf(0)
+        .firstWhere((hole) => rules.movesFrom(controller.board, hole).isNotEmpty);
+    controller.tapHole(piece);
+
+    final view = controller.targets;
+    expect(view, isNotEmpty);
+    expect(identical(view, controller.targets), isTrue);
+    expect(() => view[0] = view.values.first, throwsUnsupportedError);
+
+    controller.tapHole(view.keys.first);
+    expect(identical(view, controller.targets), isTrue);
+    expect(view, isEmpty);
+  });
+
   test('人机模式电脑自动回棋，随后轮到人类', () async {
     final controller = build(mode: PlayMode.vsAi, difficulty: Difficulty.easy);
     controller.start();

@@ -205,6 +205,35 @@ void main() {
     theme.dispose();
   });
 
+  test('窗口尺寸变化时复用模型坐标层，不重录底板与棋子', () async {
+    final controller = CheckersController(setup: setup);
+    final theme = ValueNotifier<BoardTheme>(kBoardThemes.first);
+    final board = BoardComponent(
+      source: controller,
+      theme: theme,
+      showHints: true,
+    );
+    await board.onLoad();
+    board.size = Vector2(680, 777);
+    board.update(0);
+
+    _render(board);
+    final boardBuilds = board.boardLayerBuilds;
+    final pieceBuilds = board.pieceLayerBuilds;
+    expect(boardBuilds, 1);
+    expect(pieceBuilds, 1);
+
+    // 拖动窗口改变尺寸只换缩放矩阵，静态层与棋子精灵继续复用。
+    board.size = Vector2(900, 1028);
+    _render(board);
+    _render(board);
+    expect(board.boardLayerBuilds, boardBuilds);
+    expect(board.pieceLayerBuilds, pieceBuilds);
+
+    controller.dispose();
+    theme.dispose();
+  });
+
   test('走子动画期间静止棋子层只录一次', () async {
     const six = GameSetup(mode: PlayMode.local, playerCount: PlayerCount.six);
     final controller = CheckersController(setup: six);

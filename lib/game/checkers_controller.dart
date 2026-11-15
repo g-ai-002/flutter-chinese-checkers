@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
@@ -70,6 +71,9 @@ class CheckersController extends ChangeNotifier implements BoardSource {
   @override
   int? selectedHole;
   final Map<int, CheckersMove> _movesByTarget = {};
+
+  /// 可落点表的只读视图：棋盘每帧读取，复用视图避免逐帧复制整张表。
+  late final Map<int, CheckersMove> _targetsView = UnmodifiableMapView(_movesByTarget);
   @override
   final List<MoveRecord> history = [];
   final List<_Snapshot> _undoStack = [];
@@ -131,7 +135,7 @@ class CheckersController extends ChangeNotifier implements BoardSource {
   int progressOf(int seat) => rules.progress(board, seat, setup.targetArmOf(seat));
 
   @override
-  Map<int, CheckersMove> get targets => Map.unmodifiable(_movesByTarget);
+  Map<int, CheckersMove> get targets => _targetsView;
 
   void start() {
     if (_startedAt != null) return;

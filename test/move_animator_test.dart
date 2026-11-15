@@ -48,6 +48,14 @@ void main() {
     expect(animator.current!.cells, const [0, 1]);
   });
 
+  test('动画路径入队时生成一次，逐帧插值不再重建', () {
+    final move = CheckersMove.jump(0, const [2, 4]);
+    final anim = MoveAnimation(move: move, cells: const [0]);
+
+    expect(anim.path, const [0, 2, 4]);
+    expect(identical(anim.path, anim.path), isTrue);
+  });
+
   test('清空队列后不再播放任何动画', () {
     final animator = MoveAnimator()
       ..enqueue(CheckersMove.step(0, 1), const [1])

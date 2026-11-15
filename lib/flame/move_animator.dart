@@ -11,10 +11,14 @@ import '../game/checkers_rules.dart';
 class MoveAnimation {
   MoveAnimation({required this.move, required List<int> cells, this.leadIn = 0})
     : cells = List<int>.of(cells),
+      path = [move.from, ...move.landings],
       duration = 0.16 + 0.05 * math.min(move.landings.length - 1, 6);
 
   final CheckersMove move;
   final List<int> cells;
+
+  /// 起点与每一跳落点，逐帧插值直接复用，避免每帧重建路径表。
+  final List<int> path;
 
   /// 单步 0.16 秒，每多一跳增加 0.05 秒，最长 0.46 秒。
   final double duration;

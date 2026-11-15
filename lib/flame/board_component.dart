@@ -21,6 +21,9 @@ const double _contentHalfHeight = 8.0;
 const double _pieceRadius = 0.4;
 const double _holeRadius = 0.44;
 
+/// 单枚棋子的绘制方框，四周留出一点阴影与高光。
+const double _pieceBox = 1.4;
+
 /// Flame 棋盘组件：绘制六角星棋盘、棋子、可走提示与走子动画，并处理点击。
 class BoardComponent extends PositionComponent with TapCallbacks {
   BoardComponent({required this.source, required this.theme, required this.showHints});
@@ -44,24 +47,24 @@ class BoardComponent extends PositionComponent with TapCallbacks {
   int? _pulseHole;
   double _pulseStart = 0;
 
-  double _cacheScale = 0;
+  /// 静态层统一按「孔距 = 1」的模型坐标录制，渲染时再整体缩放。
+  ///
+  /// 这样窗口尺寸变化只需换一个矩阵，不必重录 121 个孔位与棋子精灵。
   ui.Picture? _boardLayer;
+  int _boardBuilds = 0;
   final Map<int, ui.Picture> _sprites = {};
-  double _spriteScale = 0;
 
   /// 棋子层按当前局面录成一张 Picture，静止时不再逐枚绘制。
   ui.Picture? _piecesLayer;
   CheckersBoard? _piecesBoard;
   int _piecesHistory = -1;
   BoardTheme? _piecesTheme;
-  double _piecesScale = 0;
   int _piecesBuilds = 0;
 
   /// 动画期间的静止棋子层：整段动画只录一次，每帧与移动中的棋子叠加。
   ui.Picture? _animLayer;
   List<int>? _animLayerCells;
   BoardTheme? _animLayerTheme;
-  double _animLayerScale = 0;
   int _animLayerBuilds = 0;
 
   BoardGeometry get _geometry => source.geometry;
@@ -85,8 +88,6 @@ class BoardComponent extends PositionComponent with TapCallbacks {
   }
 
   void _invalidate() {
-    _cacheScale = 0;
-    _spriteScale = 0;
     _disposeLayers();
     _disposePieces();
     _disposeAnimLayer();
@@ -167,21 +168,15 @@ class BoardComponent extends PositionComponent with TapCallbacks {
     if (scale <= 0) return;
     _scale = scale;
     _origin = Offset(size.x / 2, size.y / 2);
-    if (_sprites.isNotEmpty && (_spriteScale - scale).abs() > 0.01) {
-      for (final sprite in _sprites.values) {
-        sprite.dispose();
-      }
-      _sprites.clear();
-      _disposeAnimLayer();
-    }
-    _spriteScale = scale;
-    _ensureLayers(scale);
+    _ensureLayers();
 
     final anim = _animator.current;
     final cells = anim?.cells ?? source.board.cells;
-    canvas.save();
-    canvas.translate(_origin.dx, _origin.dy);
-    canvas.rotate(_rotation);
+    canvas
+      ..save()
+      ..translate(_origin.dx, _origin.dy)
+      ..rotate(_rotation)
+      ..scale(scale);
     final layer = _boardLayer;
     if (layer != null) canvas.drawPicture(layer);
     if (anim == null) {
@@ -205,42 +200,42 @@ class BoardComponent extends PositionComponent with TapCallbacks {
     return math.pi / 2 - base;
   }
 
+  /// 孔位在模型坐标中的位置，绘制时由画布统一缩放。
   Offset _point(int hole) {
     final h = _geometry.holes[hole];
-    return Offset(h.x * _scale, h.y * _scale);
+    return Offset(h.x, h.y);
   }
 
-  /// 底板、营地底色与孔位不随对局变化，随尺寸缓存为一张图片。
-  void _ensureLayers(double scale) {
-    if (_boardLayer != null && (_cacheScale - scale).abs() < 0.01) return;
-    _disposeLayers();
-    _cacheScale = scale;
+  /// 底板、营地底色与孔位不随对局变化，按模型坐标缓存为一张图片。
+  void _ensureLayers() {
+    if (_boardLayer != null) return;
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
-    _paintPlate(canvas, scale);
-    _paintCamps(canvas, scale);
-    _paintHoles(canvas, scale);
+    _paintPlate(canvas);
+    _paintCamps(canvas);
+    _paintHoles(canvas);
     _boardLayer = recorder.endRecording();
+    _boardBuilds++;
   }
 
-  void _paintPlate(Canvas canvas, double scale) {
+  void _paintPlate(Canvas canvas) {
     final palette = theme.value;
     final path = Path();
     path.addPolygon(<Offset>[
-      for (final p in BoardGeometry.starOutline()) Offset(p[0] * scale, p[1] * scale),
+      for (final p in BoardGeometry.starOutline()) Offset(p[0], p[1]),
     ], true);
 
     canvas.drawPath(
       path.shift(const Offset(0, 0.16)),
       Paint()
         ..color = Colors.black.withValues(alpha: 0.22)
-        ..maskFilter = MaskFilter.blur(BlurStyle.normal, scale * 0.32),
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 0.32),
     );
 
     canvas.drawPath(
       path,
       Paint()
-        ..shader = ui.Gradient.linear(Offset(0, -scale * 7), Offset(0, scale * 7), [
+        ..shader = ui.Gradient.linear(const Offset(0, -7), const Offset(0, 7), [
           palette.plateTop,
           palette.plateBottom,
         ]),
@@ -249,59 +244,55 @@ class BoardComponent extends PositionComponent with TapCallbacks {
       path,
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = scale * 0.06
+        ..strokeWidth = 0.06
         ..color = palette.plateEdge,
     );
     canvas.drawPath(
       path,
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = scale * 0.14
+        ..strokeWidth = 0.14
         ..color = Colors.white.withValues(alpha: 0.06),
     );
     // 顶部一抹柔光，让深色底板不至于发闷。
     canvas.drawOval(
-      Rect.fromCenter(center: Offset(0, -scale * 4.4), width: scale * 12, height: scale * 5.4),
+      Rect.fromCenter(center: const Offset(0, -4.4), width: 12, height: 5.4),
       Paint()
-        ..shader = ui.Gradient.radial(Offset(0, -scale * 4.4), scale * 6, [
+        ..shader = ui.Gradient.radial(const Offset(0, -4.4), 6, [
           Colors.white.withValues(alpha: 0.10),
           Colors.white.withValues(alpha: 0),
         ]),
     );
   }
 
-  void _paintCamps(Canvas canvas, double scale) {
+  void _paintCamps(Canvas canvas) {
     for (var seat = 0; seat < source.players; seat++) {
       final color = playerStyleOf(seat).main;
       final arm = source.setup.seatArms[seat];
       for (final hole in _geometry.armHoles[arm]) {
-        canvas.drawCircle(
-          _point(hole),
-          scale * 0.78,
-          Paint()..color = color.withValues(alpha: 0.16),
-        );
+        canvas.drawCircle(_point(hole), 0.78, Paint()..color = color.withValues(alpha: 0.16));
       }
       // 对面营地用空心圆标注目标，与自家营地实心色块区分。
       final goal = source.setup.targetArmOf(seat);
       final tip = _geometry.tipHole(goal);
       canvas.drawCircle(
         _point(tip),
-        scale * 0.52,
+        0.52,
         Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = scale * 0.055
+          ..strokeWidth = 0.055
           ..color = color.withValues(alpha: 0.85),
       );
     }
   }
 
-  void _paintHoles(Canvas canvas, double scale) {
+  void _paintHoles(Canvas canvas) {
     final palette = theme.value;
     for (final hole in _geometry.holes) {
       final center = _point(hole.index);
-      final radius = scale * _holeRadius;
+      const radius = _holeRadius;
       canvas.drawCircle(
-        center + Offset(0, scale * 0.035),
+        center + const Offset(0, 0.035),
         radius,
         Paint()..color = Colors.black.withValues(alpha: 0.20),
       );
@@ -310,7 +301,7 @@ class BoardComponent extends PositionComponent with TapCallbacks {
         radius,
         Paint()
           ..shader = ui.Gradient.radial(
-            center + Offset(-radius * 0.3, -radius * 0.35),
+            center + const Offset(-radius * 0.3, -radius * 0.35),
             radius * 1.5,
             [palette.holeFill, palette.holeInner],
           ),
@@ -320,7 +311,7 @@ class BoardComponent extends PositionComponent with TapCallbacks {
         radius,
         Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = scale * 0.018
+          ..strokeWidth = 0.018
           ..color = palette.holeEdge.withValues(alpha: 0.9),
       );
     }
@@ -331,14 +322,14 @@ class BoardComponent extends PositionComponent with TapCallbacks {
     if (hole == null || cells[hole] < 0) return;
     final center = _point(hole);
     final style = playerStyleOf(cells[hole]);
-    final radius = _scale * 0.47;
+    const radius = 0.47;
     canvas.drawCircle(
       center,
-      radius + _scale * 0.05,
+      radius + 0.05,
       Paint()
         ..color = Colors.black.withValues(alpha: 0.35)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = _scale * 0.13,
+        ..strokeWidth = 0.13,
     );
     canvas.drawCircle(
       center,
@@ -346,14 +337,14 @@ class BoardComponent extends PositionComponent with TapCallbacks {
       Paint()
         ..color = style.light
         ..style = PaintingStyle.stroke
-        ..strokeWidth = _scale * 0.07,
+        ..strokeWidth = 0.07,
     );
     final pulse = 0.5 + 0.5 * math.sin(_time * 3.4);
     final elapsed = _pulseHole == hole ? _time - _pulseStart : 0.0;
     final settle = 1 - (elapsed / selectionPulseSeconds).clamp(0.0, 1.0);
     canvas.drawCircle(
       center,
-      radius + _scale * (0.06 + pulse * 0.03 * settle),
+      radius + 0.06 + pulse * 0.03 * settle,
       Paint()..color = style.light.withValues(alpha: 0.18 + pulse * settle * 0.12),
     );
   }
@@ -370,23 +361,23 @@ class BoardComponent extends PositionComponent with TapCallbacks {
     final pulse = 0.5 - 0.5 * math.cos(lead * math.pi * 2.4);
     canvas.drawCircle(
       center,
-      _scale * 0.44,
+      0.44,
       Paint()..color = style.light.withValues(alpha: 0.16 + 0.14 * pulse),
     );
     canvas.drawCircle(
       center,
-      _scale * (0.5 + 0.12 * pulse),
+      0.5 + 0.12 * pulse,
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = _scale * 0.07
+        ..strokeWidth = 0.07
         ..color = style.light.withValues(alpha: 0.9),
     );
     canvas.drawCircle(
       center,
-      _scale * (0.58 + 0.2 * pulse),
+      0.58 + 0.2 * pulse,
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = _scale * 0.03
+        ..strokeWidth = 0.03
         ..color = style.light.withValues(alpha: 0.5 * (1 - pulse)),
     );
   }
@@ -403,23 +394,15 @@ class BoardComponent extends PositionComponent with TapCallbacks {
       if (jump) {
         canvas.drawCircle(
           center,
-          _scale * 0.37,
+          0.37,
           Paint()
             ..style = PaintingStyle.stroke
-            ..strokeWidth = _scale * 0.045
+            ..strokeWidth = 0.045
             ..color = Colors.white.withValues(alpha: 0.65),
         );
-        canvas.drawCircle(
-          center,
-          _scale * 0.12,
-          Paint()..color = Colors.white.withValues(alpha: 0.85),
-        );
+        canvas.drawCircle(center, 0.12, Paint()..color = Colors.white.withValues(alpha: 0.85));
       } else {
-        canvas.drawCircle(
-          center,
-          _scale * 0.13,
-          Paint()..color = Colors.white.withValues(alpha: 0.72),
-        );
+        canvas.drawCircle(center, 0.13, Paint()..color = Colors.white.withValues(alpha: 0.72));
       }
     }
   }
@@ -431,7 +414,7 @@ class BoardComponent extends PositionComponent with TapCallbacks {
     const color = Color(0xFFE9C46A);
     final paint = Paint()
       ..color = color
-      ..strokeWidth = _scale * 0.055
+      ..strokeWidth = 0.055
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
     final path = hint.path;
@@ -440,10 +423,10 @@ class BoardComponent extends PositionComponent with TapCallbacks {
 
     canvas.drawCircle(
       points.first,
-      _scale * 0.5,
+      0.5,
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = _scale * 0.05
+        ..strokeWidth = 0.05
         ..color = color.withValues(alpha: 0.9),
     );
 
@@ -452,10 +435,10 @@ class BoardComponent extends PositionComponent with TapCallbacks {
       final end = points[i + 1];
       final delta = end - start;
       final length = delta.distance;
-      if (length < 1) continue;
+      if (length < 0.1) continue;
       final dir = delta / length;
-      final from = start + dir * (_scale * 0.48);
-      final to = end - dir * (_scale * 0.48);
+      final from = start + dir * 0.48;
+      final to = end - dir * 0.48;
       canvas.drawLine(from, to, paint);
       if (i == points.length - 2) _drawArrowHead(canvas, to, delta, color);
     }
@@ -463,7 +446,7 @@ class BoardComponent extends PositionComponent with TapCallbacks {
 
   void _drawArrowHead(Canvas canvas, Offset tip, Offset delta, Color color) {
     final angle = math.atan2(delta.dy, delta.dx);
-    final head = _scale * 0.24;
+    const head = 0.24;
     final path = Path()
       ..moveTo(tip.dx, tip.dy)
       ..lineTo(tip.dx - head * math.cos(angle - 0.45), tip.dy - head * math.sin(angle - 0.45))
@@ -492,10 +475,7 @@ class BoardComponent extends PositionComponent with TapCallbacks {
   ui.Picture _ensureAnimLayer(MoveAnimation anim) {
     final cached = _animLayer;
     final cells = anim.cells;
-    if (cached != null &&
-        identical(_animLayerCells, cells) &&
-        (_animLayerScale - _scale).abs() < 0.001 &&
-        _animLayerTheme == theme.value) {
+    if (cached != null && identical(_animLayerCells, cells) && _animLayerTheme == theme.value) {
       return cached;
     }
     _disposeAnimLayer();
@@ -511,22 +491,19 @@ class BoardComponent extends PositionComponent with TapCallbacks {
     _animLayer = layer;
     _animLayerCells = cells;
     _animLayerTheme = theme.value;
-    _animLayerScale = _scale;
     _animLayerBuilds++;
     return layer;
   }
 
   /// 局面静止时把全部棋子录成一张 Picture。
   ///
-  /// 缓存键只需覆盖「棋盘对象 + 着法数 + 尺寸 + 配色」：实时对局每走一手
+  /// 缓存键只需覆盖「棋盘对象 + 着法数 + 配色」：实时对局每走一手
   /// 着法数都会增加，悔棋与复盘回退会换掉棋盘对象，因此不会读到旧局面。
   void _ensurePieces() {
     final board = source.board;
-    final scale = _scale;
     if (_piecesLayer != null &&
         identical(_piecesBoard, board) &&
         _piecesHistory == source.history.length &&
-        (_piecesScale - scale).abs() < 0.001 &&
         _piecesTheme == theme.value) {
       return;
     }
@@ -543,12 +520,11 @@ class BoardComponent extends PositionComponent with TapCallbacks {
     _piecesBoard = board;
     _piecesHistory = source.history.length;
     _piecesTheme = theme.value;
-    _piecesScale = scale;
     _piecesBuilds++;
   }
 
   Offset _animPosition(MoveAnimation anim) {
-    final path = anim.move.path;
+    final path = anim.path;
     final segments = path.length - 1;
     final scaled = anim.progress * segments;
     final index = math.min(segments - 1, scaled.floor());
@@ -560,33 +536,31 @@ class BoardComponent extends PositionComponent with TapCallbacks {
 
   double _animLift(MoveAnimation anim) {
     if (!anim.move.jump) return 0;
-    final path = anim.move.path;
+    final path = anim.path;
     final segments = path.length - 1;
     final scaled = anim.progress * segments;
     final local = scaled - scaled.floor();
-    return math.sin(local * math.pi) * _scale * 0.30;
+    return math.sin(local * math.pi) * 0.30;
   }
 
   double _ease(double t) => t * t * (3 - 2 * t);
 
   void _drawPiece(Canvas canvas, Offset center, int seat) {
     final sprite = _pieceSprite(seat);
-    final box = _scale * 1.4;
     canvas.save();
-    canvas.translate(center.dx - box / 2, center.dy - box / 2);
+    canvas.translate(center.dx - _pieceBox / 2, center.dy - _pieceBox / 2);
     canvas.drawPicture(sprite);
     canvas.restore();
   }
 
-  /// 单枚棋子录成小图，动画期间只做平移缩放。
+  /// 单枚棋子录成小图，动画期间只做平移。
   ui.Picture _pieceSprite(int seat) {
     final cached = _sprites[seat];
     if (cached != null) return cached;
     final style = playerStyleOf(seat);
-    const box = 1.4;
+    const box = _pieceBox;
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
-    canvas.scale(_scale);
     const center = Offset(box / 2, box / 2);
     const radius = _pieceRadius;
 
@@ -649,7 +623,8 @@ class BoardComponent extends PositionComponent with TapCallbacks {
     final raw = Offset(event.localPosition.x, event.localPosition.y) - _origin;
     final cos = math.cos(-_rotation);
     final sin = math.sin(-_rotation);
-    final local = Offset(raw.dx * cos - raw.dy * sin, raw.dx * sin + raw.dy * cos);
+    // 换算到「孔距 = 1」的模型坐标，与绘制共用同一套孔位。
+    final local = Offset(raw.dx * cos - raw.dy * sin, raw.dx * sin + raw.dy * cos) / _scale;
     var best = -1;
     var bestDistance = double.infinity;
     for (final hole in _geometry.holes) {
@@ -660,7 +635,7 @@ class BoardComponent extends PositionComponent with TapCallbacks {
         best = hole.index;
       }
     }
-    if (best < 0 || bestDistance > _scale * 0.62) return;
+    if (best < 0 || bestDistance > 0.62) return;
     final before = source.history.length;
     final selectedBefore = source.selectedHole;
     source.tapHole(best);
@@ -674,6 +649,10 @@ class BoardComponent extends PositionComponent with TapCallbacks {
   /// 棋子层重新录制的次数，用于验证静止帧复用了缓存。
   @visibleForTesting
   int get pieceLayerBuilds => _piecesBuilds;
+
+  /// 底板层重新录制的次数，用于验证窗口缩放复用了模型坐标缓存。
+  @visibleForTesting
+  int get boardLayerBuilds => _boardBuilds;
 
   /// 动画层重新录制的次数，用于验证整段动画只录一次。
   @visibleForTesting
