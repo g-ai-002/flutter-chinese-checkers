@@ -140,4 +140,39 @@ void main() {
 
     expect(find.text('已通关 0/9'), findsOneWidget);
   });
+
+  Future<void> pumpHome(WidgetTester tester, Size size) async {
+    tester.view.physicalSize = size;
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final settings = await boot();
+    await tester.pumpWidget(wrap(settings));
+    await tester.pump();
+  }
+
+  testWidgets('桌面窗口首页无需滚动，内容整体垂直居中', (tester) async {
+    await pumpHome(tester, const Size(1180, 860));
+
+    final scrollable = tester.state<ScrollableState>(find.byType(Scrollable).first);
+    expect(scrollable.position.maxScrollExtent, 0);
+
+    final topGap = tester.getRect(find.text(AppConstants.appName).first).top;
+    final bottomGap = 860 - tester.getRect(find.textContaining('v${AppConstants.version}')).bottom;
+    expect(topGap, greaterThan(40));
+    expect((topGap - bottomGap).abs(), lessThan(16));
+
+    // 宽屏改为左右两栏：玩法入口在文案右侧，而不是压在预览图下方。
+    final hero = tester.getRect(find.text('六角星上的\n连跳博弈'));
+    expect(tester.getRect(find.text('人机对战')).left, greaterThan(hero.right));
+  });
+
+  testWidgets('窄屏首页保持单列并允许滚动', (tester) async {
+    await pumpHome(tester, const Size(360, 780));
+
+    final scrollable = tester.state<ScrollableState>(find.byType(Scrollable).first);
+    expect(scrollable.position.maxScrollExtent, greaterThan(0));
+    expect(tester.getRect(find.text(AppConstants.appName).first).top, lessThan(80));
+    expect(tester.getRect(find.text('人机对战')).top, greaterThan(400));
+  });
 }

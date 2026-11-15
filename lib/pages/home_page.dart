@@ -41,12 +41,16 @@ class HomePage extends StatelessWidget {
             builder: (context, constraints) {
               final wide = constraints.maxWidth >= kHomeWideBreakpoint;
               final horizontal = constraints.maxWidth >= kHomePaddingBreakpoint ? 36.0 : 20.0;
+              const vertical = 20.0;
+              // 内容不足一屏时整体垂直居中，超出时正常滚动，首屏即完整居中。
+              final minHeight = math.max(0.0, constraints.maxHeight - vertical * 2);
               return SingleChildScrollView(
-                padding: EdgeInsets.fromLTRB(horizontal, 10, horizontal, 28),
+                padding: EdgeInsets.symmetric(horizontal: horizontal, vertical: vertical),
                 child: Center(
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 880),
+                    constraints: BoxConstraints(maxWidth: 880, minHeight: minHeight),
                     child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         const _TopBar(),
@@ -55,11 +59,22 @@ class HomePage extends StatelessWidget {
                           Row(
                             children: [
                               SizedBox(
-                                width: math.min(300, constraints.maxWidth * 0.36),
-                                child: StarPreview(theme: settings.boardTheme),
+                                width: math.min(300, constraints.maxWidth * 0.34),
+                                child: Column(
+                                  children: [
+                                    StarPreview(theme: settings.boardTheme),
+                                    const SizedBox(height: 22),
+                                    _HeroText(settings: settings),
+                                  ],
+                                ),
                               ),
-                              const SizedBox(width: 32),
-                              Expanded(child: _HeroText(settings: settings)),
+                              const SizedBox(width: 36),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: _modes(context, settings),
+                                ),
+                              ),
                             ],
                           )
                         else ...[
@@ -71,83 +86,9 @@ class HomePage extends StatelessWidget {
                           ),
                           const SizedBox(height: 20),
                           _HeroText(settings: settings),
+                          const SizedBox(height: 28),
+                          ..._modes(context, settings),
                         ],
-                        const SizedBox(height: 28),
-                        _ModeCard(
-                          icon: Icons.smart_toy_outlined,
-                          color: theme.colorScheme.primary,
-                          title: PlayMode.vsAi.label,
-                          subtitle:
-                              '${settings.playerCount.label} · '
-                              '${settings.difficulty.label}难度 · 自动接管电脑回合',
-                          onTap: () => _start(context, settings, PlayMode.vsAi),
-                        ),
-                        const SizedBox(height: 12),
-                        _ModeCard(
-                          icon: Icons.groups_outlined,
-                          color: theme.colorScheme.tertiary,
-                          title: PlayMode.local.label,
-                          subtitle: '同一台设备轮流落子 · 支持 2 / 3 / 4 / 6 人',
-                          onTap: () => _start(context, settings, PlayMode.local),
-                        ),
-                        const SizedBox(height: 12),
-                        _ModeCard(
-                          icon: Icons.flag_outlined,
-                          color: theme.colorScheme.secondary,
-                          title: '残局挑战',
-                          subtitle: settings.challengeCompleted == 0
-                              ? '${settings.maxChallengeStars ~/ 3} 道残局 · '
-                                    '限步通关 · 逐关解锁'
-                              : '已通关 ${settings.challengeCompleted}/'
-                                    '${settings.maxChallengeStars ~/ 3} · '
-                                    '${settings.challengeStars} 星',
-                          onTap: () => _openChallenge(context),
-                        ),
-                        const SizedBox(height: 12),
-                        _ModeCard(
-                          icon: Icons.collections_bookmark_outlined,
-                          color: theme.colorScheme.secondary,
-                          title: '棋谱库',
-                          subtitle: settings.replays.isEmpty
-                              ? '终局自动存档 · 分享码导入导出'
-                              : '已存 ${settings.replays.length} 局 · '
-                                    '分享码导入导出',
-                          onTap: () => _openArchive(context),
-                        ),
-                        const SizedBox(height: 12),
-                        _ModeCard(
-                          icon: Icons.query_stats,
-                          color: theme.colorScheme.secondary,
-                          title: '对局统计',
-                          subtitle: _summaryHint(settings.matchSummary),
-                          onTap: () => _openStats(context),
-                        ),
-                        const SizedBox(height: 18),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            TextButton.icon(
-                              onPressed: () => showRulesDialog(context),
-                              icon: const Icon(Icons.menu_book_outlined, size: 18),
-                              label: const Text('玩法说明'),
-                            ),
-                            const SizedBox(width: 8),
-                            TextButton.icon(
-                              onPressed: () => _openSettings(context),
-                              icon: const Icon(Icons.tune, size: 18),
-                              label: const Text('设置'),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Center(
-                          child: Text(
-                            'v${AppConstants.version} · 本地运行，无需联网',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ),
                       ],
                     ),
                   ),
@@ -158,6 +99,83 @@ class HomePage extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// 玩法入口与页脚：窄屏堆叠在文案下方，宽屏独立成右栏。
+  List<Widget> _modes(BuildContext context, SettingsProvider settings) {
+    final theme = Theme.of(context);
+    return [
+      _ModeCard(
+        icon: Icons.smart_toy_outlined,
+        color: theme.colorScheme.primary,
+        title: PlayMode.vsAi.label,
+        subtitle:
+            '${settings.playerCount.label} · '
+            '${settings.difficulty.label}难度 · 自动接管电脑回合',
+        onTap: () => _start(context, settings, PlayMode.vsAi),
+      ),
+      const SizedBox(height: 12),
+      _ModeCard(
+        icon: Icons.groups_outlined,
+        color: theme.colorScheme.tertiary,
+        title: PlayMode.local.label,
+        subtitle: '同一台设备轮流落子 · 支持 2 / 3 / 4 / 6 人',
+        onTap: () => _start(context, settings, PlayMode.local),
+      ),
+      const SizedBox(height: 12),
+      _ModeCard(
+        icon: Icons.flag_outlined,
+        color: theme.colorScheme.secondary,
+        title: '残局挑战',
+        subtitle: settings.challengeCompleted == 0
+            ? '${settings.maxChallengeStars ~/ 3} 道残局 · 限步通关 · 逐关解锁'
+            : '已通关 ${settings.challengeCompleted}/${settings.maxChallengeStars ~/ 3} · '
+                  '${settings.challengeStars} 星',
+        onTap: () => _openChallenge(context),
+      ),
+      const SizedBox(height: 12),
+      _ModeCard(
+        icon: Icons.collections_bookmark_outlined,
+        color: theme.colorScheme.secondary,
+        title: '棋谱库',
+        subtitle: settings.replays.isEmpty
+            ? '终局自动存档 · 分享码导入导出'
+            : '已存 ${settings.replays.length} 局 · 分享码导入导出',
+        onTap: () => _openArchive(context),
+      ),
+      const SizedBox(height: 12),
+      _ModeCard(
+        icon: Icons.query_stats,
+        color: theme.colorScheme.secondary,
+        title: '对局统计',
+        subtitle: _summaryHint(settings.matchSummary),
+        onTap: () => _openStats(context),
+      ),
+      const SizedBox(height: 18),
+      Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          TextButton.icon(
+            onPressed: () => showRulesDialog(context),
+            icon: const Icon(Icons.menu_book_outlined, size: 18),
+            label: const Text('玩法说明'),
+          ),
+          const SizedBox(width: 8),
+          TextButton.icon(
+            onPressed: () => _openSettings(context),
+            icon: const Icon(Icons.tune, size: 18),
+            label: const Text('设置'),
+          ),
+        ],
+      ),
+      const SizedBox(height: 6),
+      Center(
+        child: Text(
+          'v${AppConstants.version} · 本地运行，无需联网',
+          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+        ),
+      ),
+    ];
   }
 
   Future<void> _start(BuildContext context, SettingsProvider settings, PlayMode mode) async {
