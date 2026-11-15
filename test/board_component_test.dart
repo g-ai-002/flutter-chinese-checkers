@@ -272,22 +272,42 @@ void main() {
     board.size = Vector2(680, 777);
     board.update(0);
 
-    // 第一帧还在重放 Picture，第二帧升级为贴图：两帧画面应几乎完全相同。
-    final vector = await _renderPixels(board);
-    expect(board.boardRasterized, isFalse);
-    final raster = await _renderPixels(board);
-    expect(board.boardRasterized, isTrue);
+    await _expectRasterMatches(board);
+    controller.dispose();
+    theme.dispose();
+  });
 
-    var maxDelta = 0;
-    var mismatched = 0;
-    for (var i = 0; i < vector.length; i++) {
-      final delta = (vector[i] - raster[i]).abs();
-      if (delta > 0) mismatched++;
-      if (delta > maxDelta) maxDelta = delta;
-    }
-    expect(maxDelta, lessThanOrEqualTo(2));
-    expect(mismatched / vector.length, lessThan(0.005));
+  test('宽屏底板贴图只覆盖棋盘外接矩形，不含两侧留白', () async {
+    final controller = CheckersController(setup: setup);
+    final theme = ValueNotifier<BoardTheme>(kBoardThemes.first);
+    final board = BoardComponent(source: controller, theme: theme, showHints: true);
+    await board.onLoad();
+    board.size = Vector2(900, 777);
+    board.update(0);
 
+    _render(board);
+    _render(board);
+    final rect = board.boardRasterRect;
+    // 棋盘按 14:16 铺满高度，宽 680、左右各留 110，不应把留白也光栅化。
+    expect(rect.width, closeTo(680, 2));
+    expect(rect.height, closeTo(777, 2));
+    expect(rect.left, closeTo(110, 2));
+
+    controller.dispose();
+    theme.dispose();
+  });
+
+  test('人机旋转棋盘：底板贴图覆盖旋转后的整块棋盘', () async {
+    const vsAi = GameSetup(mode: PlayMode.vsAi, playerCount: PlayerCount.three, humanSeat: 1);
+    final controller = CheckersController(setup: vsAi);
+    final theme = ValueNotifier<BoardTheme>(kBoardThemes.first);
+    final board = BoardComponent(source: controller, theme: theme, showHints: false);
+    await board.onLoad();
+    // 旋转 60° 后外接矩形比 14:16 更大，裁到窗口内也不能缺角。
+    board.size = Vector2(777, 777);
+    board.update(0);
+
+    await _expectRasterMatches(board);
     controller.dispose();
     theme.dispose();
   });
@@ -329,6 +349,24 @@ void _render(BoardComponent board) {
   final recorder = ui.PictureRecorder();
   board.render(ui.Canvas(recorder));
   recorder.endRecording().dispose();
+}
+
+/// 底板从 Picture 升级为贴图的前后两帧应逐像素一致。
+Future<void> _expectRasterMatches(BoardComponent board) async {
+  final vector = await _renderPixels(board);
+  expect(board.boardRasterized, isFalse);
+  final raster = await _renderPixels(board);
+  expect(board.boardRasterized, isTrue);
+
+  var maxDelta = 0;
+  var mismatched = 0;
+  for (var i = 0; i < vector.length; i++) {
+    final delta = (vector[i] - raster[i]).abs();
+    if (delta > 0) mismatched++;
+    if (delta > maxDelta) maxDelta = delta;
+  }
+  expect(maxDelta, lessThanOrEqualTo(2));
+  expect(mismatched / vector.length, lessThan(0.005));
 }
 
 /// 按物理像素把棋盘渲染成 RGBA 字节，用于比对贴图与矢量绘制是否一致。

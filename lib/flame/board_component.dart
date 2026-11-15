@@ -63,6 +63,7 @@ class BoardComponent extends PositionComponent with TapCallbacks {
   /// 换成贴图后每帧只剩一次 1:1 的矩形绘制。窗口还在连续缩放时先继续重放
   /// Picture，等同一尺寸出现两帧再升级成贴图，避免拖动窗口时每帧新建纹理。
   ui.Image? _boardImage;
+  Rect _boardImageRect = Rect.zero;
   double _boardImageScale = 0;
   double? _boardPendingScale;
   int _boardRasters = 0;
@@ -114,6 +115,7 @@ class BoardComponent extends PositionComponent with TapCallbacks {
   void _disposeBoardImage() {
     _boardImage?.dispose();
     _boardImage = null;
+    _boardImageRect = Rect.zero;
     _boardImageScale = 0;
     _boardPendingScale = null;
   }
@@ -235,21 +237,30 @@ class BoardComponent extends PositionComponent with TapCallbacks {
       _inModelSpace(canvas, () => canvas.drawPicture(layer));
       return;
     }
-    _blit(canvas, image, _origin, _boardPaint);
+    _blit(canvas, image, _boardImageRect, _boardPaint);
   }
 
   /// 按物理像素 1:1 画出贴图：贴图按当前像素尺寸光栅化，不能再被缩放。
-  void _blit(Canvas canvas, ui.Image image, Offset center, Paint paint) {
+  void _blit(Canvas canvas, ui.Image image, Rect destination, Paint paint) {
     canvas.drawImageRect(
       image,
       Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
-      Rect.fromCenter(
-        center: center,
-        width: image.width / _pixelRatio,
-        height: image.height / _pixelRatio,
-      ),
+      destination,
       paint,
     );
+  }
+
+  /// 旋转后的棋盘外接矩形（裁到组件范围内），贴图只需覆盖这一块。
+  Rect _contentRect() {
+    final cos = _cosRotation.abs();
+    final sin = _sinRotation.abs();
+    final halfWidth = (_contentHalfWidth * cos + _contentHalfHeight * sin) * _scale;
+    final halfHeight = (_contentHalfWidth * sin + _contentHalfHeight * cos) * _scale;
+    return Rect.fromCenter(
+      center: _origin,
+      width: halfWidth * 2,
+      height: halfHeight * 2,
+    ).intersect(Rect.fromLTWH(0, 0, size.x, size.y));
   }
 
   /// 底板贴图：尺寸不变时一直复用，尺寸还在连续变化时先重放 Picture。
@@ -257,15 +268,24 @@ class BoardComponent extends PositionComponent with TapCallbacks {
     final layer = _boardLayer;
     if (layer == null) return null;
     final pixelScale = _scale * _pixelRatio;
+    final content = _contentRect();
+    if (content.isEmpty) return null;
+    // 贴图与目标矩形都对齐到整像素，绘制时才是真正的 1:1。
+    final left = (content.left * _pixelRatio).round();
+    final top = (content.top * _pixelRatio).round();
+    final width = (content.width * _pixelRatio).round();
+    final height = (content.height * _pixelRatio).round();
+    if (width <= 0 || height <= 0 || width * height > maxRasterPixels) return null;
+    final destination = Rect.fromLTWH(
+      left / _pixelRatio,
+      top / _pixelRatio,
+      width / _pixelRatio,
+      height / _pixelRatio,
+    );
     final cached = _boardImage;
     if (cached != null) {
-      if (_boardImageScale == pixelScale) return cached;
+      if (_boardImageScale == pixelScale && _boardImageRect == destination) return cached;
       _disposeBoardImage();
-    }
-    final width = (_origin.dx * 2 * _pixelRatio).round();
-    final height = (_origin.dy * 2 * _pixelRatio).round();
-    if (width <= 0 || height <= 0 || width * height > maxRasterPixels) {
-      return null;
     }
     // 拖动窗口缩放时尺寸每帧都变，先用 Picture 顶上；同一尺寸出现两帧再光栅化。
     if (_boardPendingScale != pixelScale) {
@@ -275,12 +295,13 @@ class BoardComponent extends PositionComponent with TapCallbacks {
     _boardPendingScale = null;
     final image = _rasterize(layer, width, height, (canvas) {
       canvas
-        ..translate(width / 2, height / 2)
+        ..translate(_origin.dx * _pixelRatio - left, _origin.dy * _pixelRatio - top)
         ..rotate(_rotation)
         ..scale(pixelScale);
     });
     _boardImage = image;
     _boardImageScale = pixelScale;
+    _boardImageRect = destination;
     _boardRasters++;
     return image;
   }
@@ -598,7 +619,17 @@ class BoardComponent extends PositionComponent with TapCallbacks {
   double _ease(double t) => t * t * (3 - 2 * t);
 
   void _drawPiece(Canvas canvas, Offset center, int seat) {
-    _blit(canvas, _pieceRaster(seat), center, _spritePaint);
+    final image = _pieceRaster(seat);
+    _blit(
+      canvas,
+      image,
+      Rect.fromCenter(
+        center: center,
+        width: image.width / _pixelRatio,
+        height: image.height / _pixelRatio,
+      ),
+      _spritePaint,
+    );
   }
 
   /// 单枚棋子的贴图：按像素边长缓存，窗口缩放只重做这几张小图。
@@ -725,6 +756,10 @@ class BoardComponent extends PositionComponent with TapCallbacks {
   /// 当前是否已经用贴图绘制底板（而不是重放 Picture）。
   @visibleForTesting
   bool get boardRasterized => _boardImage != null;
+
+  /// 底板贴图覆盖的目标矩形，用于验证宽屏下没有连两侧留白一起光栅化。
+  @visibleForTesting
+  Rect get boardRasterRect => _boardImageRect;
 
   /// 当前是否需要持续刷新：走子动画，或选中棋子仍在呼吸高亮。
   ///
