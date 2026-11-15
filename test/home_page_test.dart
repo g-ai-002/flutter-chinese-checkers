@@ -175,4 +175,31 @@ void main() {
     expect(tester.getRect(find.text(AppConstants.appName).first).top, lessThan(80));
     expect(tester.getRect(find.text('人机对战')).top, greaterThan(400));
   });
+
+  testWidgets('首页全屏边到边：无 AppBar，渐变铺满整屏', (tester) async {
+    await pumpHome(tester, const Size(400, 860));
+
+    expect(find.byType(AppBar), findsNothing);
+    expect(tester.getRect(find.byType(Scaffold)), const Rect.fromLTWH(0, 0, 400, 860));
+    final gradient = tester.widget<Container>(
+      find.descendant(of: find.byType(Scaffold), matching: find.byType(Container)).first,
+    );
+    final decoration = gradient.decoration as BoxDecoration;
+    expect(decoration.gradient, isA<LinearGradient>());
+    // 内容从状态栏下方开始，渐变仍铺到屏幕最顶端。
+    expect(tester.getRect(find.text(AppConstants.appName).first).top, greaterThan(0));
+  });
+
+  testWidgets('桌面窗口尺寸矩阵下首页无需滚动且整体垂直居中', (tester) async {
+    for (final size in const [Size(1024, 768), Size(1440, 900), Size(1920, 1080)]) {
+      await pumpHome(tester, size);
+      final scrollable = tester.state<ScrollableState>(find.byType(Scrollable).first);
+      expect(scrollable.position.maxScrollExtent, 0, reason: '${size.width}×${size.height}');
+
+      final topGap = tester.getRect(find.text(AppConstants.appName).first).top;
+      final bottomGap =
+          size.height - tester.getRect(find.textContaining('v${AppConstants.version}')).bottom;
+      expect((topGap - bottomGap).abs(), lessThan(16), reason: '${size.width}×${size.height}');
+    }
+  });
 }
