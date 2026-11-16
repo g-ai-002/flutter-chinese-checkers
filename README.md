@@ -38,13 +38,13 @@
 
 ## 下载
 
-v0.6.7（最新）：[Gitea Release](http://192.168.31.120:3020/GTech/flutter-chinese-checkers/releases/tag/v0.6.7)
+v0.6.8（最新）：[Gitea Release](http://192.168.31.120:3020/GTech/flutter-chinese-checkers/releases/tag/v0.6.8)
 
 | 平台 | 产物 |
 | --- | --- |
-| Android (arm64) | `flutter-chinese-checkers-0.6.7-android-aarch64.apk` |
-| Windows (x64, Win10+) | `flutter-chinese-checkers-0.6.7-windows-x86_64.zip` |
-| Web | `flutter-chinese-checkers-0.6.7-web.zip`（解压后起静态服务器） |
+| Android (arm64) | `flutter-chinese-checkers-0.6.8-android-aarch64.apk` |
+| Windows (x64, Win10+) | `flutter-chinese-checkers-0.6.8-windows-x86_64.zip` |
+| Web | `flutter-chinese-checkers-0.6.8-web.zip`（解压后起静态服务器） |
 
 ## 规则
 
@@ -93,8 +93,8 @@ lib/
 
 | 版本 | 说明 |
 | --- | --- |
+| v0.6.8 | 音频引擎升级：flutter_soloud 5.2.3 → 5.3.0，播放 API 无需改动，修复 Windows 退出挂起并带来 SIMD 混音加速 |
 | v0.6.7 | 渲染性能优化：底板改由贴图绘制，棋子改逐枚小贴图并移除整盘棋子层，软件光栅下 6 人局每帧 6.9ms → 1.9ms；首页全屏沉浸与居中复核 |
 | v0.6.6 | 运行性能优化：棋盘静态层改模型坐标录制，窗口缩放不重录；首页宽屏双栏并垂直居中 |
 | v0.6.5 | 性能与流畅度优化：动画期间棋子整层复用、选中高亮限时后停帧、落子只重建一次界面 |
 | v0.6.4 | 布局与生命周期规范对齐：棋盘居中、控制按钮固定在下方、窄屏按网格比例定横竖屏，离开对局页不留后台任务 |
-| v0.6.3 | 逻辑更新速率 30 / 60 / 120 Hz 可选，默认 60 Hz；固定步长推进，卡顿帧最多补 8 步 |
